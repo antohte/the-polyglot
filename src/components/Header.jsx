@@ -1,39 +1,76 @@
-import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
-
+// src/components/Header.jsx
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import useUserProfile from "../hooks/useUserProfile";
+import { useEffect, useState } from "react";
+import ProfileModal from "./ProfileModal";
 
 export default function Header() {
-const { user, logout, signInGoogle } = useAuth()
-const loc = useLocation()
+  const { user, logout, signInGoogle } = useAuth();
+  const { profile, loading } = useUserProfile(user?.uid);
+  const [openProfile, setOpenProfile] = useState(false);
+  const loc = useLocation();
 
+  // Ouvre le profil AUTOMATIQUEMENT UNE SEULE FOIS si incomplet
+  useEffect(() => {
+    if (!user || loading) return;
 
-const navClass = (path) => `nav-link ${loc.pathname === path ? 'active' : ''}`
+    const uid = user.uid;
+    const promptedKey = `profilePrompted:${uid}`;
 
+    const complete =
+      !!profile &&
+      !!profile.firstName &&
+      !!profile.lastName &&
+      !!profile.licenseYear;
 
-return (
-<header className="header header-centered">
-{/* Actions auth en haut à droite */}
-<div className="auth-actions">
-{user ? (
-<>
-<span className="user">{user.displayName || user.email}</span>
-<button className="btn" onClick={logout}>Logout</button>
-</>
-) : (
-<button className="btn" onClick={signInGoogle}>Login</button>
-)}
-</div>
+    if (!complete) {
+      // pas encore complet → on ne le montre qu'une fois automatiquement
+      if (!localStorage.getItem(promptedKey)) {
+        setOpenProfile(true);
+        localStorage.setItem(promptedKey, "1");
+      }
+    } else {
+      // profil complet → on n'affiche plus automatiquement
+      // (rien à faire, le flag "prompted" peut rester)
+    }
+  }, [user, profile, loading]);
 
+  const navClass = (path) => `nav-link ${loc.pathname === path ? "active" : ""}`;
 
-{/* Logo centré (remplace par <img className="logo-img" src="/logo.png" alt="The Polyglot" /> si tu as l'image) */}
-<div className="logo big">THE<br/>Polyglot</div>
+  return (
+    <header className="header header-centered">
+      <div className="auth-actions">
+        {user ? (
+          <>
+            <span className="user">
+              {profile?.fullName || user.displayName || user.email}
+            </span>
+            <button className="btn" onClick={() => setOpenProfile(true)}>
+              Profil
+            </button>
+            <button className="btn" onClick={logout}>Logout</button>
+          </>
+        ) : (
+          <button className="btn" onClick={signInGoogle}>Login</button>
+        )}
+      </div>
 
+      <div className="logo big">THE<br/>Polyglot</div>
 
-{/* Nav centrée sous le logo, espacée et en "pills" */}
-<nav className="nav-under-logo">
-<Link className={navClass('/')} to="/">Accueil</Link>
-<Link className={navClass('/forum')} to="/forum">Forum</Link>
-</nav>
-</header>
-)
+      <nav className="nav-under-logo">
+        <Link className={navClass("/")} to="/">Accueil</Link>
+        <Link className={navClass("/forum")} to="/forum">Forum</Link>
+      </nav>
+
+      {/* Modal profil (ouverture manuelle ou auto une seule fois) */}
+      <ProfileModal
+        user={user}
+        initialProfile={profile}
+        open={openProfile}
+        onClose={() => setOpenProfile(false)}
+        onSaved={() => setOpenProfile(false)}
+      />
+    </header>
+  );
 }
