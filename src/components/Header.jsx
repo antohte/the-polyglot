@@ -1,15 +1,17 @@
 // src/components/Header.jsx
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import useUserProfile from "../hooks/useUserProfile";
 import { useEffect, useState } from "react";
 import ProfileModal from "./ProfileModal";
+import "../styles/Header.css";
 
 export default function Header() {
-  const { user, logout, signInGoogle } = useAuth();
+  const { user, logout } = useAuth();
   const { profile, loading } = useUserProfile(user?.uid);
   const [openProfile, setOpenProfile] = useState(false);
   const loc = useLocation();
+  const navigate = useNavigate();
 
   // Ouvre le profil AUTOMATIQUEMENT UNE SEULE FOIS si incomplet
   useEffect(() => {
@@ -38,29 +40,43 @@ export default function Header() {
 
   const navClass = (path) => `nav-link ${loc.pathname === path ? "active" : ""}`;
 
+  const userInitial = user
+    ? (profile?.fullName || user.displayName || user.email)?.charAt(0).toUpperCase() || "U"
+    : null;
+
   return (
     <header className="header header-centered">
       <div className="auth-actions">
         {user ? (
-          <>
-            <span className="user">
-              {profile?.fullName || user.displayName || user.email}
-            </span>
-            <button className="btn" onClick={() => setOpenProfile(true)}>
-              Profil
+          <div className="user-menu">
+            <button 
+              className="user-info-btn"
+              onClick={() => navigate("/profile")}
+              title="Voir le profil"
+            >
+              <span className="user-avatar">{userInitial}</span>
+              <span className="user-email">{profile?.fullName || user.displayName || user.email}</span>
             </button>
-            <button className="btn" onClick={logout}>Logout</button>
-          </>
+            <button className="btn btn-logout" onClick={logout}>
+              🚪 Logout
+            </button>
+          </div>
         ) : (
-          <button className="btn" onClick={signInGoogle}>Login</button>
+          <button className="btn btn-login" onClick={() => navigate("/login")}>
+            🔐 Login
+          </button>
         )}
       </div>
 
       <div className="logo big">THE<br/>Polyglot</div>
 
       <nav className="nav-under-logo">
-        <Link className={navClass("/")} to="/">Accueil</Link>
-        <Link className={navClass("/forum")} to="/forum">Forum</Link>
+        <Link className={navClass("/")} to="/">
+          🏠 Accueil
+        </Link>
+        <Link className={navClass("/forum")} to="/forum">
+          💬 Forum
+        </Link>
       </nav>
 
       {/* Modal profil (ouverture manuelle ou auto une seule fois) */}

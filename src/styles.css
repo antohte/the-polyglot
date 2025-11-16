@@ -138,14 +138,52 @@ a { color: var(--text); text-decoration: none; }
 
 /* ============== POSTS ============== */
 .post {
-  background: var(--card);
-  border: 2px solid #000;     /* bordure noire demandée */
+  background: white;
+  border: 2px solid #e6dfd4;
   border-radius: 18px;
   padding: 16px;
   margin: 16px 0;
-  box-shadow: 0 6px 22px rgba(0,0,0,0.06);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
 }
-.post-header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+
+.post-link-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.post::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.post:hover {
+  border-color: #667eea;
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.12);
+  transform: translateY(-2px);
+}
+
+.post:hover::before {
+  opacity: 1;
+}
+
+.post-header { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+  margin-bottom: 8px; 
+}
 .post-topline { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .post-author { font-weight: 700; color: #000; }   /* auteur bien visible */
 .post-category { color: var(--muted); }

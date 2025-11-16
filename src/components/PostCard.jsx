@@ -1,5 +1,6 @@
 // src/components/PostCard.jsx
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   doc,
   collection,
@@ -45,7 +46,7 @@ export default function PostCard({ post }) {
   }, [post.id, user]);
 
   async function toggleLike() {
-    if (!user) return alert("Please login to like");
+    if (!user) return alert("Vous devez être connecté pour liker. Cliquez sur Login en haut à droite.");
     const likeRef = doc(db, "posts", post.id, "likes", user.uid);
     const snap = await getDoc(likeRef);
     if (snap.exists()) await deleteDoc(likeRef);
@@ -54,7 +55,7 @@ export default function PostCard({ post }) {
 
   async function addComment(e) {
     e.preventDefault();
-    if (!user) return alert("Please login to comment");
+    if (!user) return alert("Vous devez être connecté pour commenter. Cliquez sur Login en haut à droite.");
     if (!commentText.trim()) return;
     await addDoc(collection(db, "posts", post.id, "comments"), {
       text: commentText.trim(),
@@ -67,32 +68,36 @@ export default function PostCard({ post }) {
 
   return (
     <article className="post">
-  <div className="post-header">
-    <div className="post-topline">
-      <span className="post-author">{post.authorName}</span>
-      <span className="dot">•</span>
-      <span className="post-category">{post.category}</span>
-    </div>
+      <Link to={`/post/${post.id}`} className="post-link-overlay" />
+      <div className="post-header">
+        <div className="post-topline">
+          <span className="post-author">{post.authorName}</span>
+          <span className="dot">•</span>
+          <span className="post-category">{post.category}</span>
+        </div>
 
-    <h3 className="post-title">{post.title}</h3>
-  </div>
+        <h3 className="post-title">{post.title}</h3>
+      </div>
 
-  {post.mediaUrl &&
-    (post.mediaType === "video" ? (
-      <video className="media" src={post.mediaUrl} controls />
-    ) : (
-      <img className="media" src={post.mediaUrl} alt="media" />
-    ))}
+      {post.mediaUrl &&
+        (post.mediaType === "video" ? (
+          <video className="media" src={post.mediaUrl} controls />
+        ) : (
+          <img className="media" src={post.mediaUrl} alt="media" />
+        ))}
 
-  <p className="content">{post.content}</p>
+      <p className="content">{post.content}</p>
 
-  <div className="actions">
-    <button className={`btn like-btn ${liked ? "active" : ""}`} onClick={toggleLike}>
-      👍 {likeCount}
-    </button>
-  </div>
+      <div className="actions">
+        <button className={`btn like-btn ${liked ? "active" : ""}`} onClick={toggleLike}>
+          👍 {likeCount}
+        </button>
+        <Link to={`/post/${post.id}`} className="btn">
+          💬 {comments.length}
+        </Link>
+      </div>
 
-      <div className="comments">
+      <div className="comments" style={{ display: 'none' }}>
         {comments.map((c) => (
           <div key={c.id} className="comment">
             <span className="comment-author">{c.authorName}</span>
@@ -101,7 +106,7 @@ export default function PostCard({ post }) {
         ))}
       </div>
 
-      <form className="comment-form" onSubmit={addComment}>
+      <form className="comment-form" style={{ display: 'none' }} onSubmit={addComment}>
         <input
           type="text"
           className="ui-input"

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useNavigate } from "react-router-dom";
 import { db, storage } from "../firebase";
 import { useAuth } from "../auth/AuthContext";
 import { CATEGORIES } from "../constants/categories";
@@ -10,6 +11,7 @@ import useUserProfile from "../hooks/useUserProfile";
 export default function NewPostForm({ fixedCategory = null, onSuccess }) {
   const { user } = useAuth();
   const { profile } = useUserProfile(user?.uid);
+  const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -21,7 +23,16 @@ export default function NewPostForm({ fixedCategory = null, onSuccess }) {
   const [busy, setBusy] = useState(false);
 
   if (!user) {
-    return <div className="card">Login to post.</div>;
+    return (
+      <div className="card">
+        <p style={{ color: "var(--muted)", marginBottom: "15px" }}>
+          Vous devez être connecté pour créer un post.
+        </p>
+        <button className="btn" onClick={() => navigate("/login")}>
+          Se connecter
+        </button>
+      </div>
+    );
   }
 
   async function handleSubmit(e) {
@@ -43,11 +54,13 @@ export default function NewPostForm({ fixedCategory = null, onSuccess }) {
         mediaType: file ? mediaType : null,
         authorId: user.uid,
         authorName,
-        authorNameLower: authorName.toLowerCase(), // utile plus tard
+        authorNameLower: authorName.toLowerCase(),
         createdAt: serverTimestamp(),
       });
 
-      setTitle(""); setContent(""); setFile(null);
+      setTitle("");
+      setContent("");
+      setFile(null);
       onSuccess?.();
     } catch (e) {
       console.error(e);
@@ -62,34 +75,69 @@ export default function NewPostForm({ fixedCategory = null, onSuccess }) {
       <h3>Create a post</h3>
 
       <label>Title
-        <input className="ui-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Your title" required />
+        <input
+          className="ui-input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Your title"
+          required
+        />
       </label>
 
       {!fixedCategory && (
         <label>Category
-          <select className="ui-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <select
+            className="ui-select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
             {CATEGORIES.map((c) => {
               const name = c.name ?? c;
-              return <option key={name} value={name}>{name}</option>;
+              return (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              );
             })}
           </select>
         </label>
       )}
-      {fixedCategory && <div className="badge" style={{ marginBottom: 8 }}>{fixedCategory}</div>}
+      {fixedCategory && (
+        <div className="badge" style={{ marginBottom: 8 }}>
+          {fixedCategory}
+        </div>
+      )}
 
       <label>Content
-        <textarea className="ui-input" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Say something" rows={4} required />
+        <textarea
+          className="ui-input"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Say something"
+          rows={4}
+          required
+        />
       </label>
 
       <label>Media (optional)
-        <select className="ui-select" value={mediaType} onChange={(e) => setMediaType(e.target.value)}>
+        <select
+          className="ui-select"
+          value={mediaType}
+          onChange={(e) => setMediaType(e.target.value)}
+        >
           <option value="image">Image</option>
           <option value="video">Video</option>
         </select>
-        <input type="file" accept={mediaType === "image" ? "image/*" : "video/*"} onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        <input
+          type="file"
+          accept={mediaType === "image" ? "image/*" : "video/*"}
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+        />
       </label>
 
-      <button className="btn" disabled={busy} type="submit">{busy ? "Posting…" : "Post"}</button>
+      <button className="btn" disabled={busy} type="submit">
+        {busy ? "Posting…" : "Post"}
+      </button>
     </form>
   );
 }
