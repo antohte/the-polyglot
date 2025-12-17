@@ -49,7 +49,7 @@ export default function Header() {
       <div className="auth-actions">
         {user ? (
           <div className="user-menu">
-            <button 
+            <button
               className="user-info-btn"
               onClick={() => navigate("/profile")}
               title="Voir le profil"
@@ -68,7 +68,7 @@ export default function Header() {
         )}
       </div>
 
-      <div className="logo big">THE<br/>Polyglot</div>
+      <div className="logo big">THE<br />Polyglot</div>
 
       <nav className="nav-under-logo">
         <Link className={navClass("/")} to="/">
@@ -76,6 +76,9 @@ export default function Header() {
         </Link>
         <Link className={navClass("/forum")} to="/forum">
           💬 Forum
+        </Link>
+        <Link className={navClass("/events")} to="/events">
+          📅 Événements
         </Link>
       </nav>
 

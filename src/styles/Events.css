@@ -1,0 +1,127 @@
+/* Events Section Styles - Matching The Polyglot theme */
+
+.events-hero {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin: 16px 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.events-hero h1 {
+    margin: 0 0 12px;
+    color: var(--text);
+}
+
+.events-hero p {
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Event Card - matches post card style */
+.event-card {
+    position: relative;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    margin: 16px 0;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+}
+
+.event-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.event-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.12);
+    transform: translateY(-2px);
+}
+
+.event-card:hover::before {
+    opacity: 1;
+}
+
+.event-date-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--brand);
+    color: #000;
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(11, 93, 167, 0.25);
+    z-index: 2;
+}
+
+.event-photo {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+}
+
+.event-title {
+    margin: 0 0 8px;
+    font-size: 20px;
+    line-height: 1.25;
+    color: var(--text);
+}
+
+.event-description {
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.event-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.event-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.event-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.rsvp-count {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* Events grid - reuse categories grid */
+.events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+}

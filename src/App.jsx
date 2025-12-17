@@ -7,6 +7,7 @@ import Category from './pages/Category.jsx'
 import Login from './pages/Login.jsx'
 import Profile from './pages/Profile.jsx'
 import PostDetail from './pages/PostDetail.jsx'
+import Events from './pages/Events.jsx'
 
 export default function App() {
   const { loading } = useAuth()
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/forum" element={<Forum />} />
         <Route path="/forum/:slug" element={<Category />} />
+        <Route path="/events" element={<Events />} />
         <Route path="/post/:postId" element={<PostDetail />} />
       </Routes>
     </div>

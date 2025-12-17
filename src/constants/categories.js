@@ -1,10 +1,15 @@
+// src/constants/categories.js
+
 export const CATEGORIES = [
-{ name: 'Stages / Formation / Masterclasses', slug: 'stages-formation-masterclasses' },
-{ name: 'Journalisme', slug: 'journalisme' },
-{ name: 'Actualités : Licence / Fac / Catho', slug: 'actualites-licence-fac-catho' },
-{ name: 'Production / Langues', slug: 'production-langues' },
-{ name: 'Humanitaire / Bénévolat', slug: 'humanitaire-benevolat' }
-]
+    { name: "General", slug: "general" },
+    { name: "Questions", slug: "questions" },
+    { name: "Discussions", slug: "discussions" },
+    { name: "Announcements", slug: "announcements" },
+    { name: "Help", slug: "help" },
+];
 
-
-export const bySlug = Object.fromEntries(CATEGORIES.map(c => [c.slug, c.name]))
+// Helper object to quickly find category name by slug
+export const bySlug = CATEGORIES.reduce((acc, cat) => {
+    acc[cat.slug] = cat.name;
+    return acc;
+}, {});

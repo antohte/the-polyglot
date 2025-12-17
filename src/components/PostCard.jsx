@@ -74,6 +74,22 @@ export default function PostCard({ post }) {
           <span className="post-author">{post.authorName}</span>
           <span className="dot">•</span>
           <span className="post-category">{post.category}</span>
+          {post.status && (
+            <>
+              <span className="dot">•</span>
+              <span className={`badge status-${post.status}`}>
+                {post.status === 'draft' ? '📝 Draft' :
+                  post.status === 'pending' ? '⏳ Pending' :
+                    '✅ Validated'}
+              </span>
+            </>
+          )}
+          {post.language && (
+            <>
+              <span className="dot">•</span>
+              <span className="badge">{post.language.toUpperCase()}</span>
+            </>
+          )}
         </div>
 
         <h3 className="post-title">{post.title}</h3>

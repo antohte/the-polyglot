@@ -10,7 +10,7 @@ export default function PostDetail() {
   const { postId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
@@ -152,7 +152,7 @@ export default function PostDetail() {
         </div>
 
         <div className="post-detail-actions">
-          <button 
+          <button
             className={`action-btn ${liked ? 'active' : ''}`}
             onClick={handleLike}
           >
@@ -175,9 +175,9 @@ export default function PostDetail() {
                 rows="3"
                 className="ui-input"
               />
-              <button 
+              <button
                 className="btn"
-                type="submit" 
+                type="submit"
                 disabled={submitting || !commentText.trim()}
               >
                 {submitting ? 'Envoi...' : 'Commenter'}

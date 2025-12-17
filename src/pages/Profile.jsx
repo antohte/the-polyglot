@@ -64,7 +64,7 @@ export default function Profile() {
         updatedAt: new Date(),
       };
       await setDoc(ref, payload, { merge: true });
-      await updateProfile(user, { displayName: fullName }).catch(() => {});
+      await updateProfile(user, { displayName: fullName }).catch(() => { });
 
       setEditMode(false);
       setSuccessMsg("Profil mis à jour avec succès !");
