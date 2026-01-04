@@ -9,6 +9,15 @@ import Profile from './pages/Profile.jsx'
 import PostDetail from './pages/PostDetail.jsx'
 import Events from './pages/Events.jsx'
 
+// Admin Components
+import AdminRoute from './components/AdminRoute.jsx'
+import AdminLayout from './components/AdminLayout.jsx'
+import AdminDashboard from './pages/admin/AdminDashboard.jsx'
+import AdminUsers from './pages/admin/AdminUsers.jsx'
+import AdminPosts from './pages/admin/AdminPosts.jsx'
+import AdminEvents from './pages/admin/AdminEvents.jsx'
+import AdminPolls from './pages/admin/AdminPolls.jsx'
+
 export default function App() {
   const { loading } = useAuth()
 
@@ -27,6 +36,17 @@ export default function App() {
         <Route path="/forum/:slug" element={<Category />} />
         <Route path="/events" element={<Events />} />
         <Route path="/post/:postId" element={<PostDetail />} />
+
+        {/* Admin Routes */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="posts" element={<AdminPosts />} />
+            <Route path="events" element={<AdminEvents />} />
+            <Route path="polls" element={<AdminPolls />} />
+          </Route>
+        </Route>
       </Routes>
     </div>
   )
