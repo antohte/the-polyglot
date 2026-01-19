@@ -1,0 +1,220 @@
+/* NewEventForm.css */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.new-event-form {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 20px;
+  padding: 0;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.form-header {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 10;
+}
+
+.form-header h2 {
+  margin: 0 0 0.5rem 0;
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.form-subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+  transform: rotate(90deg);
+}
+
+.new-event-form form {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.required {
+  color: #f87171;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 0.875rem 1.25rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 10px;
+  color: #f1f5f9;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #64748b;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.image-preview {
+  margin-top: 1rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+}
+
+.image-preview img {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+  object-fit: cover;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.btn-cancel,
+.btn-submit {
+  flex: 1;
+  padding: 1rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.btn-cancel {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn-submit {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+}
+
+.btn-cancel:disabled,
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .new-event-form {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .form-header {
+    padding: 1.5rem;
+  }
+
+  .form-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .new-event-form form {
+    padding: 1.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+}

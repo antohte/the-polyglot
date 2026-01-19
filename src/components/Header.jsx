@@ -80,6 +80,9 @@ export default function Header() {
         <Link className={navClass("/events")} to="/events">
           📅 Événements
         </Link>
+        <Link className={navClass("/friends")} to="/friends">
+          👥 Amis
+        </Link>
       </nav>
 
       {/* Modal profil (ouverture manuelle ou auto une seule fois) */}

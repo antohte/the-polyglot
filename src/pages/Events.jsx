@@ -2,12 +2,20 @@
 import { useState, useEffect } from "react";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "../firebase";
+import { useAuth } from "../auth/AuthContext";
+import useUserProfile from "../hooks/useUserProfile";
 import EventCard from "../components/EventCard";
+import NewEventForm from "../components/NewEventForm";
 import "../styles/Events.css";
 
 export default function Events() {
+    const { user } = useAuth();
+    const { profile } = useUserProfile(user?.uid);
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showNewEvent, setShowNewEvent] = useState(false);
+
+    const isOrganizer = profile?.role === "organizer" || profile?.role === "admin";
 
     useEffect(() => {
         const q = query(
@@ -60,17 +68,26 @@ export default function Events() {
                 )}
             </div>
 
-            {/* FAB for creating events (admin only - you can add auth check) */}
-            <button
-                className="fab"
-                onClick={() => {
-                    // TODO: Open event creation modal
-                    alert("Fonctionnalité de création d'événement à venir !");
-                }}
-                title="Créer un événement"
-            >
-                + Nouvel événement
-            </button>
+            {/* FAB for creating events (admin and organizers only) */}
+            {user && isOrganizer && (
+                <button
+                    className="fab"
+                    onClick={() => setShowNewEvent(true)}
+                    title="Créer un événement"
+                >
+                    + Nouvel événement
+                </button>
+            )}
+
+            {/* Modal for creating new event */}
+            {showNewEvent && (
+                <NewEventForm
+                    onClose={() => setShowNewEvent(false)}
+                    onSuccess={() => {
+                        setShowNewEvent(false);
+                    }}
+                />
+            )}
         </div>
     );
 }

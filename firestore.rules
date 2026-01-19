@@ -1,0 +1,136 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function userDoc() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function hasUser() { return exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function isAdmin() { return hasUser() && userDoc().data.role == 'admin'; }
+    function isOrganizer() { return hasUser() && (userDoc().data.role == 'organizer' || userDoc().data.role == 'admin'); }
+    function isModerator(cat) { return hasUser() && userDoc().data.moderates[cat] == true; }
+
+    // Users profile + roles
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.id == request.auth.uid;
+      allow update: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Posts collection
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.authorId ||
+        isAdmin() ||
+        isModerator(resource.data.category)
+      );
+    }
+
+    // Comments subcollection
+    match /posts/{postId}/comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      // Author, admin or moderator of the parent post's category can delete
+      allow delete: if isSignedIn() && (
+        request.auth.uid == resource.data.authorId ||
+        isAdmin() ||
+        isModerator(get(/databases/$(database)/documents/posts/$(postId)).data.category)
+      );
+      allow update: if false; // immutable comments (simple rule)
+    }
+
+    // Likes subcollection: one like per user (doc id = uid)
+    match /posts/{postId}/likes/{uid} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+      allow update: if false; // no content to update
+    }
+
+    // Reports - Tout utilisateur authentifié peut signaler un post
+    match /reports/{reportId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.reportedById);
+      allow update, delete: if isSignedIn() && isAdmin();
+    }
+
+    // Moderation History - Admin seulement
+    match /moderationHistory/{historyId} {
+      allow read, write: if isSignedIn() && isAdmin();
+    }
+
+    // Settings - Lecture publique, écriture admin
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isSignedIn() && isAdmin();
+    }
+
+    // Profiles utilisateurs
+    match /profiles/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Events
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isOrganizer() && request.resource.data.authorId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.authorId ||
+        isAdmin()
+      );
+    }
+
+    // Polls
+    match /polls/{pollId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.createdBy ||
+        isAdmin()
+      );
+      
+      // Votes dans les sondages
+      match /votes/{voteId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+    }
+
+    // Category Requests - Demandes de nouvelles catégories
+    match /categoryRequests/{requestId} {
+      // Tous les utilisateurs authentifiés peuvent créer une demande
+      allow create: if isSignedIn() && request.resource.data.requestedBy == request.auth.uid;
+      
+      // Tous peuvent lire les demandes
+      allow read: if true;
+      
+      // Seuls les admins peuvent mettre à jour ou supprimer
+      allow update, delete: if isSignedIn() && isAdmin();
+    }
+
+    // Categories - Catégories dynamiques créées par les admins
+    match /categories/{categoryId} {
+      // Tous peuvent lire les catégories
+      allow read: if true;
+      
+      // Seuls les admins peuvent créer des catégories
+      allow create: if isSignedIn() && isAdmin();
+      
+      // Les utilisateurs authentifiés peuvent ajouter des sous-catégories
+      // Les admins peuvent tout modifier
+      allow update: if isSignedIn() && (
+        // Vérifier si c'est juste l'ajout d'une sous-catégorie (modification du champ subcategories uniquement)
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subcategories']) ||
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subcategories', 'updatedAt']))
+        ||
+        // Ou si l'utilisateur est admin
+        isAdmin()
+      );
+      
+      // Seuls les admins peuvent supprimer
+      allow delete: if isSignedIn() && isAdmin();
+    }
+  }
+}

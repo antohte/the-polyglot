@@ -21,6 +21,16 @@ export default function Profile() {
   const [busy, setBusy] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [editSocials, setEditSocials] = useState(false);
+  const [socials, setSocials] = useState({
+    facebook: "",
+    instagram: "",
+    twitter: "",
+    linkedin: "",
+    github: "",
+    website: "",
+  });
+  const [savingSocials, setSavingSocials] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -31,6 +41,14 @@ export default function Profile() {
       setFirstName(profile.firstName || "");
       setLastName(profile.lastName || "");
       setYear(profile.licenseYear || "L3");
+      setSocials({
+        facebook: profile.socials?.facebook || "",
+        instagram: profile.socials?.instagram || "",
+        twitter: profile.socials?.twitter || "",
+        linkedin: profile.socials?.linkedin || "",
+        github: profile.socials?.github || "",
+        website: profile.socials?.website || "",
+      });
     }
   }, [user, profile, navigate]);
 
@@ -77,6 +95,26 @@ export default function Profile() {
     }
   }
 
+  async function handleSaveSocials() {
+    setSavingSocials(true);
+    try {
+      const ref = doc(db, "users", user.uid);
+      await setDoc(ref, {
+        socials: socials,
+        updatedAt: new Date(),
+      }, { merge: true });
+      
+      setEditSocials(false);
+      setSuccessMsg("Réseaux sociaux mis à jour avec succès !");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors de la sauvegarde des réseaux sociaux.");
+    } finally {
+      setSavingSocials(false);
+    }
+  }
+
   const fullName = profile?.fullName || user.displayName || user.email;
 
   return (
@@ -95,6 +133,13 @@ export default function Profile() {
                 📚 Année: <strong>{year}</strong>
               </span>
             </div>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => navigate(`/user/${user.uid}`)}
+              style={{ marginTop: "1rem" }}
+            >
+              👁️ Voir mon profil public
+            </button>
           </div>
         </div>
       </div>
@@ -191,6 +236,141 @@ export default function Profile() {
               </button>
             </div>
           </form>
+        )}
+      </div>
+
+      {/* Section Réseaux sociaux */}
+      <div className="profile-section">
+        <div className="section-header">
+          <h2>🔗 Réseaux sociaux</h2>
+          {!editSocials && (
+            <button className="btn btn-primary" onClick={() => setEditSocials(true)}>
+              ✏️ Modifier
+            </button>
+          )}
+        </div>
+
+        {editSocials ? (
+          <form className="profile-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="form-group">
+              <label>📘 Facebook</label>
+              <input
+                className="ui-input"
+                type="url"
+                placeholder="https://facebook.com/..."
+                value={socials.facebook}
+                onChange={(e) => setSocials({ ...socials, facebook: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>📷 Instagram</label>
+              <input
+                className="ui-input"
+                type="url"
+                placeholder="https://instagram.com/..."
+                value={socials.instagram}
+                onChange={(e) => setSocials({ ...socials, instagram: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>🐦 Twitter</label>
+              <input
+                className="ui-input"
+                type="url"
+                placeholder="https://twitter.com/..."
+                value={socials.twitter}
+                onChange={(e) => setSocials({ ...socials, twitter: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>💼 LinkedIn</label>
+              <input
+                className="ui-input"
+                type="url"
+                placeholder="https://linkedin.com/in/..."
+                value={socials.linkedin}
+                onChange={(e) => setSocials({ ...socials, linkedin: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>💻 GitHub</label>
+              <input
+                className="ui-input"
+                type="url"
+                placeholder="https://github.com/..."
+                value={socials.github}
+                onChange={(e) => setSocials({ ...socials, github: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>🌐 Site Web</label>
+              <input
+                className="ui-input"
+                type="url"
+                placeholder="https://..."
+                value={socials.website}
+                onChange={(e) => setSocials({ ...socials, website: e.target.value })}
+              />
+            </div>
+
+            <div className="form-actions">
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  setEditSocials(false);
+                  setSocials({
+                    facebook: profile?.socials?.facebook || "",
+                    instagram: profile?.socials?.instagram || "",
+                    twitter: profile?.socials?.twitter || "",
+                    linkedin: profile?.socials?.linkedin || "",
+                    github: profile?.socials?.github || "",
+                    website: profile?.socials?.website || "",
+                  });
+                }}
+                disabled={savingSocials}
+              >
+                Annuler
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveSocials}
+                disabled={savingSocials}
+              >
+                {savingSocials ? "Enregistrement..." : "💾 Enregistrer"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="socials-display">
+            {[
+              { key: "facebook", label: "Facebook", icon: "📘" },
+              { key: "instagram", label: "Instagram", icon: "📷" },
+              { key: "twitter", label: "Twitter", icon: "🐦" },
+              { key: "linkedin", label: "LinkedIn", icon: "💼" },
+              { key: "github", label: "GitHub", icon: "💻" },
+              { key: "website", label: "Site Web", icon: "🌐" },
+            ].map((social) => {
+              const url = socials[social.key];
+              return (
+                <div key={social.key} className="social-item">
+                  <span className="social-icon">{social.icon}</span>
+                  <span className="social-name">{social.label}:</span>
+                  {url ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="social-link-text">
+                      {url}
+                    </a>
+                  ) : (
+                    <span className="social-empty">Non renseigné</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 

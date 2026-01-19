@@ -7,6 +7,7 @@ export default function AdminPolls() {
     const [polls, setPolls] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
 
     // Form state
     const [question, setQuestion] = useState("");
@@ -81,6 +82,13 @@ export default function AdminPolls() {
 
     if (loading) return <div className="admin-loading">Chargement des sondages...</div>;
 
+    // Filtrage des sondages
+    const filteredPolls = polls.filter(poll => {
+        if (!searchTerm.trim()) return true;
+        const search = searchTerm.toLowerCase();
+        return poll.question?.toLowerCase().includes(search);
+    });
+
     return (
         <div className="admin-page">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
@@ -88,6 +96,69 @@ export default function AdminPolls() {
                 <button className="admin-btn btn-success" onClick={() => setShowForm(!showForm)}>
                     {showForm ? "Annuler" : "+ Nouveau Sondage"}
                 </button>
+            </div>
+
+            <div className="search-container" style={{
+                marginBottom: "2rem",
+                padding: "1.5rem",
+                background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)",
+                borderRadius: "16px",
+                border: "1px solid rgba(139, 92, 246, 0.2)",
+                backdropFilter: "blur(10px)"
+            }}>
+                <div style={{ position: "relative" }}>
+                    <span style={{
+                        position: "absolute",
+                        left: "1rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontSize: "1.25rem",
+                        color: "#a78bfa"
+                    }}>🔍</span>
+                    <input
+                        type="text"
+                        className="input-field"
+                        placeholder="Rechercher par question..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                            width: "100%",
+                            paddingLeft: "3rem",
+                            background: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid rgba(139, 92, 246, 0.3)",
+                            borderRadius: "12px",
+                            fontSize: "1rem",
+                            transition: "all 0.3s ease"
+                        }}
+                    />
+                </div>
+                {searchTerm && (
+                    <div style={{
+                        marginTop: "0.75rem",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                    }}>
+                        <p style={{ color: "#c4b5fd", fontSize: "0.875rem", margin: 0 }}>
+                            ✨ {filteredPolls.length} résultat(s) sur {polls.length} sondage(s)
+                        </p>
+                        <button
+                            onClick={() => setSearchTerm("")}
+                            style={{
+                                background: "rgba(139, 92, 246, 0.2)",
+                                border: "none",
+                                color: "#c4b5fd",
+                                padding: "0.25rem 0.75rem",
+                                borderRadius: "6px",
+                                fontSize: "0.875rem",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease"
+                            }}
+                        >
+                            ✕ Effacer
+                        </button>
+                    </div>
+                )}
             </div>
 
             {showForm && (
@@ -132,7 +203,14 @@ export default function AdminPolls() {
                         </tr>
                     </thead>
                     <tbody>
-                        {polls.map((poll) => {
+                        {filteredPolls.length === 0 ? (
+                            <tr>
+                                <td colSpan="4" style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>
+                                    {searchTerm ? "Aucun sondage ne correspond à votre recherche" : "Aucun sondage disponible"}
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredPolls.map((poll) => {
                             const totalVotes = poll.options?.reduce((acc, curr) => acc + (curr.votes || 0), 0) || 0;
                             return (
                                 <tr key={poll.id}>
@@ -146,7 +224,8 @@ export default function AdminPolls() {
                                     </td>
                                 </tr>
                             );
-                        })}
+                        })
+                        )}
                     </tbody>
                 </table>
             </div>

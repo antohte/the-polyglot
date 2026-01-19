@@ -69,6 +69,7 @@ export default function PostCard({ post }) {
   return (
     <article className="post">
       <Link to={`/post/${post.id}`} className="post-link-overlay" />
+      
       <div className="post-header">
         <div className="post-topline">
           <span className="post-author">{post.authorName}</span>
@@ -103,6 +104,136 @@ export default function PostCard({ post }) {
         ))}
 
       <p className="content">{post.content}</p>
+
+      {/* Affichage des fichiers multiples */}
+      {post.files && post.files.length > 0 && (
+        <div style={{ 
+          marginTop: "1rem", 
+          padding: "1rem", 
+          background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)", 
+          borderRadius: "12px",
+          border: "1px solid #e2e8f0"
+        }}>
+          <div style={{ 
+            fontSize: "0.875rem", 
+            fontWeight: "700", 
+            marginBottom: "0.75rem", 
+            color: "#334155",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem"
+          }}>
+            <span>📁</span>
+            Fichiers joints ({post.files.length})
+          </div>
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", 
+            gap: "0.75rem" 
+          }}>
+            {post.files.map((file, idx) => {
+              const getFileIcon = (type) => {
+                if (type === 'image') return '🖼️';
+                if (type === 'video') return '🎥';
+                if (type === 'pdf') return '📕';
+                if (type === 'document') return '📘';
+                return '📄';
+              };
+
+              return (
+                <a
+                  key={idx}
+                  href={file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e8f0",
+                    overflow: "hidden",
+                    textDecoration: "none",
+                    transition: "all 0.2s ease",
+                    display: "block",
+                    position: "relative",
+                    zIndex: 1
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  {file.type === 'image' ? (
+                    <div style={{
+                      width: "100%",
+                      height: "100px",
+                      overflow: "hidden",
+                      background: "#f8fafc"
+                    }}>
+                      <img 
+                        src={file.url} 
+                        alt={file.name}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover"
+                        }}
+                      />
+                    </div>
+                  ) : file.type === 'video' ? (
+                    <div style={{
+                      width: "100%",
+                      height: "100px",
+                      overflow: "hidden",
+                      background: "#000",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "2rem"
+                    }}>
+                      🎥
+                    </div>
+                  ) : (
+                    <div style={{
+                      width: "100%",
+                      height: "100px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      fontSize: "2.5rem"
+                    }}>
+                      {getFileIcon(file.type)}
+                    </div>
+                  )}
+                  <div style={{ padding: "0.5rem" }}>
+                    <div style={{ 
+                      fontSize: "0.75rem",
+                      fontWeight: "600",
+                      color: "#1e293b",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      marginBottom: "0.125rem"
+                    }}>
+                      {file.name}
+                    </div>
+                    <div style={{ 
+                      fontSize: "0.65rem",
+                      color: "#64748b"
+                    }}>
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="actions">
         <button className={`btn like-btn ${liked ? "active" : ""}`} onClick={toggleLike}>

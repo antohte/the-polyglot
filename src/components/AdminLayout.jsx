@@ -7,11 +7,14 @@ export default function AdminLayout() {
     const location = useLocation();
 
     const navItems = [
-        { label: "Dashboard", path: "/admin" },
-        { label: "Utilisateurs", path: "/admin/users" },
-        { label: "Posts", path: "/admin/posts" },
-        { label: "Événements", path: "/admin/events" },
-        { label: "Sondages", path: "/admin/polls" },
+        { label: "Dashboard", path: "/admin", icon: "📊" },
+        { label: "Utilisateurs", path: "/admin/users", icon: "👥" },
+        { label: "Posts", path: "/admin/posts", icon: "📝" },
+        { label: "Événements", path: "/admin/events", icon: "📅" },
+        { label: "Sondages", path: "/admin/polls", icon: "📊" },
+        { label: "Catégories", path: "/admin/categories", icon: "📁" },
+        { label: "Paramètres", path: "/admin/settings", icon: "⚙️" },
+        { label: "Modération", path: "/admin/moderation", icon: "🚨" },
     ];
 
     return (
@@ -27,6 +30,7 @@ export default function AdminLayout() {
                             to={item.path}
                             className={`admin-nav-link ${location.pathname === item.path ? "active" : ""}`}
                         >
+                            <span style={{ marginRight: "0.5rem" }}>{item.icon}</span>
                             {item.label}
                         </Link>
                     ))}

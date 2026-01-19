@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
+import { collection, getDocs, limit, orderBy, query, onSnapshot } from 'firebase/firestore'
 import { Link } from 'react-router-dom'
 import { db } from '../firebase'
 import PostCard from '../components/PostCard'
@@ -28,12 +28,17 @@ export default function Home() {
 
 
     useEffect(() => {
-        async function load() {
-            const q1 = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(6))
-            const snap = await getDocs(q1)
+        const q1 = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(6))
+        
+        // Listener en temps réel
+        const unsubscribe = onSnapshot(q1, (snap) => {
             setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-        }
-        load()
+        }, (error) => {
+            console.error("Erreur lors du chargement des posts:", error)
+        })
+
+        // Nettoyer le listener
+        return () => unsubscribe()
     }, [])
 
 
