@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext'
 import { ToastProvider } from './components/Toast'
 import Home from './pages/Home.jsx'
@@ -26,6 +26,10 @@ import AdminCategories from './pages/admin/AdminCategories.jsx'
 
 export default function App() {
   const { loading } = useAuth()
+  const location = useLocation()
+
+  // Hide header in admin routes
+  const isAdminRoute = location.pathname.startsWith('/admin')
 
   if (loading) {
     return <div className="loading">Chargement...</div>
@@ -34,32 +38,32 @@ export default function App() {
   return (
     <ToastProvider>
       <div className="app">
-        <Header />
+        {!isAdminRoute && <Header />}
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/" element={<Home />} />
           <Route path="/forum" element={<Forum />} />
-        <Route path="/forum/:slug" element={<Category />} />
-        <Route path="/events" element={<Events />} />
-        <Route path="/friends" element={<Friends />} />
-        <Route path="/user/:userId" element={<UserProfile />} />
-        <Route path="/post/:postId" element={<PostDetail />} />
+          <Route path="/forum/:slug" element={<Category />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/friends" element={<Friends />} />
+          <Route path="/user/:userId" element={<UserProfile />} />
+          <Route path="/post/:postId" element={<PostDetail />} />
 
-        {/* Admin Routes */}
-        <Route element={<AdminRoute />}>
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="posts" element={<AdminPosts />} />
-            <Route path="events" element={<AdminEvents />} />
-            <Route path="polls" element={<AdminPolls />} />
-            <Route path="settings" element={<AdminSettings />} />
-            <Route path="moderation" element={<AdminModeration />} />
-            <Route path="categories" element={<AdminCategories />} />
+          {/* Admin Routes */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="posts" element={<AdminPosts />} />
+              <Route path="events" element={<AdminEvents />} />
+              <Route path="polls" element={<AdminPolls />} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="moderation" element={<AdminModeration />} />
+              <Route path="categories" element={<AdminCategories />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
       </div>
     </ToastProvider>
   )

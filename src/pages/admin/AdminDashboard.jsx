@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { collection, getCountFromServer, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { Link } from "react-router-dom";
-import { db } from "../../firebase";
+import { api } from "../../api/client";
 import "../../styles/Admin.css";
 
 export default function AdminDashboard() {
@@ -15,56 +14,12 @@ export default function AdminDashboard() {
     useEffect(() => {
         async function fetchStats() {
             try {
-                const usersColl = collection(db, "users");
-                const postsColl = collection(db, "posts");
-                const eventsColl = collection(db, "events");
-                const pollsColl = collection(db, "polls");
-
-                const [usersSnap, postsSnap, eventsSnap, pollsSnap] = await Promise.all([
-                    getCountFromServer(usersColl),
-                    getCountFromServer(postsColl),
-                    getCountFromServer(eventsColl),
-                    getCountFromServer(pollsColl),
-                ]);
-
-                setStats({
-                    users: usersSnap.data().count,
-                    posts: postsSnap.data().count,
-                    events: eventsSnap.data().count,
-                    polls: pollsSnap.data().count,
-                });
-
-                // Fetch top posts by likes
-                const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(100));
-                const postsData = await getDocs(postsQuery);
-                const posts = postsData.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                // Sort by likes and get top 5
-                const sortedByLikes = posts.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0)).slice(0, 5);
-                setTopPosts(sortedByLikes);
-
-                // Category stats
-                const categoryCount = {};
-                posts.forEach(post => {
-                    const cat = post.category || "Sans catégorie";
-                    categoryCount[cat] = (categoryCount[cat] || 0) + 1;
-                });
-                const catStats = Object.entries(categoryCount)
-                    .map(([name, count]) => ({ name, count }))
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 5);
-                setCategoryStats(catStats);
-
-                // Recent users
-                const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"), limit(5));
-                const usersData = await getDocs(usersQuery);
-                setRecentUsers(usersData.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-                // Recent posts
-                const recentPostsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(5));
-                const recentPostsData = await getDocs(recentPostsQuery);
-                setRecentPosts(recentPostsData.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
+                const data = await api.stats.get();
+                setStats(data.stats);
+                setTopPosts(data.topPosts || []);
+                setCategoryStats(data.categoryStats || []);
+                setRecentUsers(data.recentUsers || []);
+                setRecentPosts(data.recentPosts || []);
             } catch (err) {
                 console.error("Error fetching admin stats:", err);
             } finally {
@@ -74,128 +29,197 @@ export default function AdminDashboard() {
         fetchStats();
     }, []);
 
-    if (loading) return <div className="admin-loading">Chargement des stats...</div>;
+    if (loading) return <div className="admin-loading">Chargement des données...</div>;
+
+    const quickActions = [
+        { label: "Nouvel Utilisateur", path: "/admin/users", icon: "👤", color: "blue" },
+        { label: "Nouvelle Annonce", path: "/admin/posts", icon: "📢", color: "purple" },
+        { label: "Maintenance", path: "/admin/settings", icon: "🔧", color: "orange" },
+    ];
 
     return (
         <div className="admin-dashboard-page">
-            <h1>📊 Tableau de Bord</h1>
-            
-            {/* KPIs */}
-            <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem", marginBottom: "2rem" }}>
-                <div className="stat-card" style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(139, 92, 246, 0.3)" }}>
-                    <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>👥</div>
-                    <h3 style={{ margin: "0 0 0.5rem 0", color: "#c4b5fd" }}>Utilisateurs</h3>
-                    <p className="stat-number" style={{ fontSize: "2.5rem", fontWeight: "bold", margin: 0 }}>{stats.users}</p>
+            <div className="section-header">
+                <div>
+                    <h1>Tableau de Bord</h1>
+                    <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>Bienvenue dans le centre de contrôle.</p>
                 </div>
-                <div className="stat-card" style={{ background: "linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(34, 197, 94, 0.3)" }}>
-                    <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📝</div>
-                    <h3 style={{ margin: "0 0 0.5rem 0", color: "#86efac" }}>Posts</h3>
-                    <p className="stat-number" style={{ fontSize: "2.5rem", fontWeight: "bold", margin: 0 }}>{stats.posts}</p>
-                </div>
-                <div className="stat-card" style={{ background: "linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(251, 146, 60, 0.2) 100%)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(249, 115, 22, 0.3)" }}>
-                    <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📅</div>
-                    <h3 style={{ margin: "0 0 0.5rem 0", color: "#fdba74" }}>Événements</h3>
-                    <p className="stat-number" style={{ fontSize: "2.5rem", fontWeight: "bold", margin: 0 }}>{stats.events}</p>
-                </div>
-                <div className="stat-card" style={{ background: "linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(219, 39, 119, 0.2) 100%)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(236, 72, 153, 0.3)" }}>
-                    <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📊</div>
-                    <h3 style={{ margin: "0 0 0.5rem 0", color: "#f9a8d4" }}>Sondages</h3>
-                    <p className="stat-number" style={{ fontSize: "2.5rem", fontWeight: "bold", margin: 0 }}>{stats.polls}</p>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ padding: '0.5rem 1rem', background: 'rgba(34, 197, 94, 0.1)', color: '#4ade80', borderRadius: '8px', border: '1px solid rgba(34, 197, 94, 0.2)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ width: '8px', height: '8px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
+                        Système Opérationnel
+                    </div>
                 </div>
             </div>
 
-            {/* Engagement Stats */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem", marginBottom: "2rem" }}>
-                {/* Top Posts */}
-                <div style={{ background: "rgba(255,255,255,0.05)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <h2 style={{ marginTop: 0, color: "#c4b5fd" }}>🔥 Posts les Plus Populaires</h2>
-                    {topPosts.length === 0 ? (
-                        <p style={{ color: "#94a3b8" }}>Aucun post pour le moment</p>
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                            {topPosts.map((post, idx) => (
-                                <div key={post.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(255,255,255,0.05)", borderRadius: "8px" }}>
-                                    <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#8b5cf6" }}>{idx + 1}</div>
-                                    <div style={{ flex: 1, overflow: "hidden" }}>
-                                        <Link to={`/post/${post.id}`} style={{ color: "inherit", textDecoration: "none", fontWeight: "500", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                            {post.title}
-                                        </Link>
-                                        <div style={{ fontSize: "0.875rem", color: "#94a3b8" }}>
-                                            ❤️ {post.likes?.length || 0} likes
+            {/* Hero Stats */}
+            <div className="stats-grid">
+                <div className="stat-card">
+                    <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '8rem', opacity: '0.05' }}>👥</div>
+                    <h3>Utilisateurs</h3>
+                    <p className="stat-number">{stats.users}</p>
+                    <div style={{ marginTop: '1rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+                        Inscrits sur la plateforme
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '8rem', opacity: '0.05' }}>📝</div>
+                    <h3>Posts Publiés</h3>
+                    <p className="stat-number">{stats.posts}</p>
+                    <div style={{ marginTop: '1rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+                        Articles et forums
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '8rem', opacity: '0.05' }}>📅</div>
+                    <h3>Événements</h3>
+                    <p className="stat-number">{stats.events}</p>
+                    <div style={{ marginTop: '1rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+                        À venir et passés
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '8rem', opacity: '0.05' }}>📊</div>
+                    <h3>Sondages Actifs</h3>
+                    <p className="stat-number">{stats.polls}</p>
+                    <div style={{ marginTop: '1rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+                        Engagement communautaire
+                    </div>
+                </div>
+            </div>
+
+            {/* Grid Layout for details */}
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem" }}>
+
+                {/* Left Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+                    {/* Quick Actions */}
+                    <div className="content-card">
+                        <h2 style={{ marginTop: 0, color: "#f8fafc", fontSize: '1.25rem', marginBottom: '1.5rem' }}>⚡ Actions Rapides</h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                            {quickActions.map((action, idx) => (
+                                <Link key={idx} to={action.path} style={{
+                                    textDecoration: 'none',
+                                    background: 'rgba(255,255,255,0.03)',
+                                    padding: '1.5rem',
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '1rem',
+                                    transition: 'all 0.3s'
+                                }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                >
+                                    <div style={{ fontSize: '2rem' }}>{action.icon}</div>
+                                    <div style={{ color: '#e2e8f0', fontWeight: '600' }}>{action.label}</div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Recent Posts */}
+                    <div className="content-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ margin: 0, color: "#f8fafc", fontSize: '1.25rem' }}>📰 Activité Récente</h2>
+                            <Link to="/admin/posts" style={{ color: '#818cf8', textDecoration: 'none', fontSize: '0.9rem' }}>Voir tout →</Link>
+                        </div>
+                        {recentPosts.length === 0 ? (
+                            <p style={{ color: "#94a3b8" }}>Aucun post récent</p>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                {recentPosts.map((post, idx) => (
+                                    <div key={post.id} style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        padding: "1rem",
+                                        background: "rgba(255,255,255,0.02)",
+                                        borderRadius: "12px",
+                                        border: "1px solid rgba(255,255,255,0.05)"
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div style={{
+                                                width: '40px', height: '40px',
+                                                borderRadius: '10px',
+                                                background: 'rgba(99, 102, 241, 0.1)',
+                                                color: '#818cf8',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '1.2rem', fontWeight: 'bold'
+                                            }}>
+                                                {idx + 1}
+                                            </div>
+                                            <div>
+                                                <Link to={`/post/${post.id}`} style={{ color: "#f1f5f9", textDecoration: "none", fontWeight: "600", display: "block" }}>
+                                                    {post.title}
+                                                </Link>
+                                                <div style={{ fontSize: "0.85rem", color: "#94a3b8", marginTop: "0.25rem" }}>
+                                                    Par {post.authorName || 'Inconnu'} • {post.created_at ? new Date(post.created_at).toLocaleDateString() : "—"}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span className="status-badge status-success">Publié</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Column (Sidebar-ish) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+                    {/* New Users */}
+                    <div className="content-card">
+                        <h2 style={{ marginTop: 0, color: "#f8fafc", fontSize: '1.25rem', marginBottom: '1.5rem' }}>👋 Nouveaux Membres</h2>
+                        {recentUsers.length === 0 ? (
+                            <p style={{ color: "#94a3b8" }}>Aucune inscription récente</p>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                {recentUsers.slice(0, 5).map(user => (
+                                    <div key={user.id} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                                        <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "linear-gradient(135deg, #f472b6, #a855f7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", color: 'white', fontWeight: 'bold' }}>
+                                            {user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+                                        </div>
+                                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                                            <div style={{ fontWeight: "600", color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.full_name || 'Utilisateur'}</div>
+                                            <div style={{ fontSize: "0.8rem", color: "#94a3b8", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
+                        )}
+                        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                            <Link to="/admin/users" className="btn-primary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>Gérer les utilisateurs</Link>
                         </div>
-                    )}
-                </div>
+                    </div>
 
-                {/* Category Stats */}
-                <div style={{ background: "rgba(255,255,255,0.05)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <h2 style={{ marginTop: 0, color: "#c4b5fd" }}>📁 Catégories les Plus Actives</h2>
-                    {categoryStats.length === 0 ? (
-                        <p style={{ color: "#94a3b8" }}>Aucune catégorie</p>
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                            {categoryStats.map((cat, idx) => (
-                                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem", background: "rgba(255,255,255,0.05)", borderRadius: "8px" }}>
-                                    <span style={{ fontWeight: "500" }}>{cat.name}</span>
-                                    <span style={{ background: "rgba(139, 92, 246, 0.3)", padding: "0.25rem 0.75rem", borderRadius: "12px", fontSize: "0.875rem", fontWeight: "bold" }}>
-                                        {cat.count} posts
-                                    </span>
-                                </div>
-                            ))}
+                    {/* Category Stats */}
+                    <div className="content-card">
+                        <h2 style={{ marginTop: 0, color: "#f8fafc", fontSize: '1.25rem', marginBottom: '1.5rem' }}>🔥 Tendances</h2>
+                        {categoryStats.length === 0 ? (
+                            <p style={{ color: "#94a3b8" }}>Aucune donnée</p>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                {categoryStats.slice(0, 4).map((cat, idx) => (
+                                    <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem", background: "rgba(255,255,255,0.02)", borderRadius: "8px" }}>
+                                        <span style={{ fontWeight: "500", color: '#cbd5e1' }}>{cat.name}</span>
+                                        <span style={{ color: '#818cf8', fontWeight: "bold" }}>
+                                            {cat.count}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                            <Link to="/admin/categories" style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Voir toutes les catégories</Link>
                         </div>
-                    )}
-                </div>
-            </div>
+                    </div>
 
-            {/* Recent Activity */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem" }}>
-                {/* Recent Users */}
-                <div style={{ background: "rgba(255,255,255,0.05)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <h2 style={{ marginTop: 0, color: "#c4b5fd" }}>👋 Dernières Inscriptions</h2>
-                    {recentUsers.length === 0 ? (
-                        <p style={{ color: "#94a3b8" }}>Aucune inscription récente</p>
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                            {recentUsers.map(user => (
-                                <div key={user.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(255,255,255,0.05)", borderRadius: "8px" }}>
-                                    <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "linear-gradient(135deg, #8b5cf6, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem" }}>
-                                        👤
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: "500" }}>{user.fullName || user.displayName || "Sans nom"}</div>
-                                        <div style={{ fontSize: "0.875rem", color: "#94a3b8" }}>{user.email}</div>
-                                    </div>
-                                    <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                                        {user.createdAt ? new Date(user.createdAt.seconds * 1000).toLocaleDateString() : "—"}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Recent Posts */}
-                <div style={{ background: "rgba(255,255,255,0.05)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <h2 style={{ marginTop: 0, color: "#c4b5fd" }}>📰 Derniers Posts</h2>
-                    {recentPosts.length === 0 ? (
-                        <p style={{ color: "#94a3b8" }}>Aucun post récent</p>
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                            {recentPosts.map(post => (
-                                <div key={post.id} style={{ padding: "0.75rem", background: "rgba(255,255,255,0.05)", borderRadius: "8px" }}>
-                                    <Link to={`/post/${post.id}`} style={{ color: "inherit", textDecoration: "none", fontWeight: "500", display: "block" }}>
-                                        {post.title}
-                                    </Link>
-                                    <div style={{ fontSize: "0.875rem", color: "#94a3b8", marginTop: "0.25rem" }}>
-                                        Par {post.authorName} • {post.createdAt ? new Date(post.createdAt.seconds * 1000).toLocaleDateString() : "—"}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

@@ -1,9 +1,7 @@
 // src/pages/Profile.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { doc, setDoc } from "firebase/firestore";
-import { updateProfile } from "firebase/auth";
-import { db } from "../firebase";
+import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import useUserProfile from "../hooks/useUserProfile";
 import "../styles/Profile.css";
@@ -18,6 +16,12 @@ export default function Profile() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [year, setYear] = useState("L3");
+  const [bio, setBio] = useState("");
+  const [location, setLocation] = useState("");
+  const [interests, setInterests] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState("");
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
@@ -32,15 +36,24 @@ export default function Profile() {
   });
   const [savingSocials, setSavingSocials] = useState(false);
 
+  // Friends & Requests
+  const [friends, setFriends] = useState([]);
+  const [requests, setRequests] = useState([]);
+
   useEffect(() => {
     if (!user) {
       navigate("/login");
       return;
     }
     if (profile) {
-      setFirstName(profile.firstName || "");
-      setLastName(profile.lastName || "");
+      const names = (profile.fullName || "").split(" ");
+      setFirstName(names[0] || "");
+      setLastName(names.slice(1).join(" ") || "");
       setYear(profile.licenseYear || "L3");
+      setBio(profile.bio || "");
+      setLocation(profile.location || "");
+      setInterests(profile.interests || "");
+      setProfilePhoto(profile.profile_photo || profile.photo_url || "");
       setSocials({
         facebook: profile.socials?.facebook || "",
         instagram: profile.socials?.instagram || "",
@@ -49,17 +62,22 @@ export default function Profile() {
         github: profile.socials?.github || "",
         website: profile.socials?.website || "",
       });
+
+      loadFriendsAndRequests();
     }
   }, [user, profile, navigate]);
 
-  if (!user) return null;
-
-  if (loading) {
-    return (
-      <div className="container">
-        <div className="loading-profile">Chargement du profil...</div>
-      </div>
-    );
+  async function loadFriendsAndRequests() {
+    try {
+      const [f, r] = await Promise.all([
+        api.users.getFriends(user.uid),
+        api.users.getPendingRequests(user.uid)
+      ]);
+      setFriends(f);
+      setRequests(r);
+    } catch (err) {
+      console.error("Error loading friends:", err);
+    }
   }
 
   async function handleSave() {
@@ -68,25 +86,48 @@ export default function Profile() {
       return;
     }
 
+    if (bio.length > 500) {
+      alert("La bio ne peut pas dépasser 500 caractères.");
+      return;
+    }
+
     setBusy(true);
     try {
+      let uploadedPhotoUrl = profilePhoto;
+
+      // Upload photo if a new file was selected
+      if (photoFile) {
+        const formData = new FormData();
+        formData.append('file', photoFile);
+
+        const uploadResponse = await fetch('http://localhost:5000/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (uploadResponse.ok) {
+          const uploadData = await uploadResponse.json();
+          uploadedPhotoUrl = uploadData.url;
+        }
+      }
+
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-      const ref = doc(db, "users", user.uid);
       const payload = {
-        uid: user.uid,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        fullName,
-        fullNameLower: fullName.toLowerCase(),
-        licenseYear: year,
-        updatedAt: new Date(),
+        full_name: fullName,
+        display_name: fullName,
+        license_year: year,
+        bio: bio.trim(),
+        location: location.trim(),
+        interests: interests.trim(),
+        profile_photo: uploadedPhotoUrl
       };
-      await setDoc(ref, payload, { merge: true });
-      await updateProfile(user, { displayName: fullName }).catch(() => { });
+
+      await api.users.update(user.uid, payload);
 
       setEditMode(false);
       setSuccessMsg("Profil mis à jour avec succès !");
       setTimeout(() => setSuccessMsg(""), 3000);
+      window.location.reload();
     } catch (e) {
       console.error(e);
       alert("Erreur lors de l'enregistrement du profil.");
@@ -98,21 +139,68 @@ export default function Profile() {
   async function handleSaveSocials() {
     setSavingSocials(true);
     try {
-      const ref = doc(db, "users", user.uid);
-      await setDoc(ref, {
-        socials: socials,
-        updatedAt: new Date(),
-      }, { merge: true });
-      
+      await api.users.update(user.uid, {
+        social_links: socials
+      });
+
       setEditSocials(false);
       setSuccessMsg("Réseaux sociaux mis à jour avec succès !");
       setTimeout(() => setSuccessMsg(""), 3000);
+      window.location.reload();
     } catch (e) {
       console.error(e);
       alert("Erreur lors de la sauvegarde des réseaux sociaux.");
     } finally {
       setSavingSocials(false);
     }
+  }
+
+  async function handleAccept(requesterId) {
+    try {
+      await api.users.acceptFriendRequest(user.uid, requesterId);
+      loadFriendsAndRequests();
+    } catch (err) { alert("Erreur accept"); }
+  }
+
+  async function handleReject(requesterId) {
+    try {
+      await api.users.removeFriend(user.uid, requesterId);
+      loadFriendsAndRequests();
+    } catch (err) { alert("Erreur reject"); }
+  }
+
+  function handlePhotoChange(e) {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("La photo ne doit pas dépasser 5 MB.");
+        return;
+      }
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  async function handleRemoveFriend(friendId) {
+    if (!window.confirm("Supprimer cet ami ?")) return;
+    try {
+      await api.users.removeFriend(user.uid, friendId);
+      loadFriendsAndRequests();
+    } catch (err) { alert("Erreur remove"); }
+  }
+
+  if (!user) return null;
+
+  if (loading) {
+    return (
+      <div className="container">
+        <div className="loading-profile">Chargement du profil...</div>
+      </div>
+    );
   }
 
   const fullName = profile?.fullName || user.displayName || user.email;
@@ -133,8 +221,8 @@ export default function Profile() {
                 📚 Année: <strong>{year}</strong>
               </span>
             </div>
-            <button 
-              className="btn btn-secondary" 
+            <button
+              className="btn btn-secondary"
               onClick={() => navigate(`/user/${user.uid}`)}
               style={{ marginTop: "1rem" }}
             >
@@ -146,6 +234,44 @@ export default function Profile() {
 
       {/* Message de succès */}
       {successMsg && <div className="success-message">{successMsg}</div>}
+
+      {/* Requests Section */}
+      {requests.length > 0 && (
+        <div className="profile-section">
+          <h2>📩 Demandes reçues</h2>
+          <div className="requests-list">
+            {requests.map(r => (
+              <div key={r.id} className="request-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee' }}>
+                <div>
+                  <strong>{r.full_name || r.display_name}</strong>
+                </div>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  <button className="btn btn-primary" onClick={() => handleAccept(r.id)}>Accepter</button>
+                  <button className="btn btn-ghost" onClick={() => handleReject(r.id)} style={{ color: 'red' }}>Refuser</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Friends Section */}
+      <div className="profile-section">
+        <h2>👥 Mes Amis ({friends.length})</h2>
+        {friends.length === 0 ? (
+          <p>Vous n'avez pas encore d'amis.</p>
+        ) : (
+          <div className="friends-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginTop: '10px' }}>
+            {friends.map(f => (
+              <div key={f.id} className="friend-card" style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontWeight: 'bold' }}>{f.full_name || f.display_name}</div>
+                <button className="btn-ghost" onClick={() => navigate(`/user/${f.id}`)} style={{ fontSize: '0.8rem', marginTop: '5px' }}>Voir</button>
+                <button className="btn-ghost" onClick={() => handleRemoveFriend(f.id)} style={{ fontSize: '0.8rem', color: 'red', marginTop: '5px' }}>Supprimer</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Section modifier le profil */}
       <div className="profile-section">
@@ -236,6 +362,137 @@ export default function Profile() {
               </button>
             </div>
           </form>
+        )}
+      </div>
+
+      {/* Section Photo de profil */}
+      <div className="profile-section">
+        <div className="section-header">
+          <h2>📸 Photo de profil</h2>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', padding: '1rem' }}>
+          <div style={{
+            width: '120px',
+            height: '120px',
+            borderRadius: '50%',
+            background: photoPreview || profilePhoto ? `url(${photoPreview || profilePhoto}) center/cover` : 'linear-gradient(135deg, #6366f1, #a855f7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '3rem',
+            color: 'white',
+            fontWeight: 'bold',
+            border: '4px solid rgba(255,255,255,0.1)'
+          }}>
+            {!photoPreview && !profilePhoto && fullName.charAt(0).toUpperCase()}
+          </div>
+          <div style={{ flex: 1 }}>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              style={{ display: 'none' }}
+              id="photo-upload"
+            />
+            <label htmlFor="photo-upload" className="btn btn-primary" style={{ cursor: 'pointer', display: 'inline-block' }}>
+              📷 Choisir une photo
+            </label>
+            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+              Format: JPG, PNG. Taille max: 5 MB
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Section Bio */}
+      <div className="profile-section">
+        <div className="section-header">
+          <h2>📝 Bio</h2>
+          {!editMode && (
+            <button className="btn btn-primary" onClick={() => setEditMode(true)}>
+              ✏️ Modifier
+            </button>
+          )}
+        </div>
+        {editMode ? (
+          <div className="form-group">
+            <textarea
+              className="ui-input"
+              rows={5}
+              maxLength={500}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Parlez-nous de vous..."
+              style={{ resize: 'vertical' }}
+            />
+            <div style={{ textAlign: 'right', color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+              {bio.length}/500 caractères
+            </div>
+          </div>
+        ) : (
+          <div className="profile-display">
+            <p style={{ whiteSpace: 'pre-wrap', color: '#cbd5e1' }}>
+              {bio || "Aucune bio renseignée"}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Section Localisation & Intérêts */}
+      <div className="profile-section">
+        <div className="section-header">
+          <h2>🌍 Localisation & Intérêts</h2>
+        </div>
+        {editMode ? (
+          <div>
+            <div className="form-group">
+              <label>📍 Localisation</label>
+              <input
+                className="ui-input"
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Paris, France"
+              />
+            </div>
+            <div className="form-group">
+              <label>🏷️ Centres d'intérêt</label>
+              <input
+                className="ui-input"
+                type="text"
+                value={interests}
+                onChange={(e) => setInterests(e.target.value)}
+                placeholder="Langues, Voyages, Musique..."
+              />
+              <small style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                Séparez par des virgules
+              </small>
+            </div>
+          </div>
+        ) : (
+          <div className="profile-display">
+            <div className="info-row">
+              <label>📍 Localisation</label>
+              <p>{location || "Non renseigné"}</p>
+            </div>
+            <div className="info-row">
+              <label>🏷️ Centres d'intérêt</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                {interests ? interests.split(',').map((interest, idx) => (
+                  <span key={idx} style={{
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    color: '#818cf8',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '20px',
+                    fontSize: '0.9rem',
+                    border: '1px solid rgba(99, 102, 241, 0.2)'
+                  }}>
+                    {interest.trim()}
+                  </span>
+                )) : <p>Non renseigné</p>}
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

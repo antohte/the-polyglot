@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "../firebase";
+import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import "../styles/NewEventForm.css";
 
@@ -31,7 +29,7 @@ export default function NewEventForm({ onClose, onSuccess }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    
+
     if (!title.trim() || !description.trim() || !date || !location.trim()) {
       alert("Veuillez remplir tous les champs obligatoires.");
       return;
@@ -43,28 +41,26 @@ export default function NewEventForm({ onClose, onSuccess }) {
 
       // Upload image if present
       if (image) {
-        const storageRef = ref(storage, `events/${Date.now()}_${image.name}`);
-        const snapshot = await uploadBytes(storageRef, image);
-        imageUrl = await getDownloadURL(snapshot.ref);
+        const uploadRes = await api.upload(image);
+        imageUrl = uploadRes.url;
       }
 
-      // Create event document
+      const eventDate = `${date} ${time ? time + ':00' : '00:00:00'}`;
+
       const eventData = {
+        id: crypto.randomUUID(),
         title: title.trim(),
         description: description.trim(),
-        date: date,
-        time: time || "",
+        event_date: eventDate,
         location: location.trim(),
-        imageUrl: imageUrl,
+        image_url: imageUrl,
         link: link.trim(),
-        authorId: user.uid,
-        authorName: user.displayName || user.email,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        author_id: user.uid,
+        // authorName not needed, joined in query
       };
 
-      await addDoc(collection(db, "events"), eventData);
-      
+      await api.events.create(eventData);
+
       onSuccess?.();
     } catch (err) {
       console.error("Erreur lors de la création de l'événement:", err);

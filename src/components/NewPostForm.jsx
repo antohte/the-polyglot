@@ -1,9 +1,7 @@
 // src/components/NewPostForm.jsx
-import { useState, useEffect } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { db, storage } from "../firebase";
+import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useToast } from "./Toast";
 import { CATEGORIES } from "../constants/categories";
@@ -11,7 +9,7 @@ import useUserProfile from "../hooks/useUserProfile";
 import PostPreview from "./PostPreview";
 import CancelAlertModal from "./CancelAlertModal";
 
-export default function NewPostForm({ fixedCategory = null, subcategories = [], onSuccess }) {
+export default function NewPostForm({ fixedCategory = null, fixedCategorySlug = null, fixedSubcategory = null, subcategories = [], onSuccess }) {
   const { user } = useAuth();
   const { profile } = useUserProfile(user?.uid);
   const { addToast } = useToast();
@@ -29,7 +27,7 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
   const [isPreview, setIsPreview] = useState(false);
   const [showCancelAlert, setShowCancelAlert] = useState(false);
   const [subcategory, setSubcategory] = useState(
-    subcategories && subcategories.length > 0 ? subcategories[0].name : ""
+    fixedSubcategory || (subcategories && subcategories.length > 0 ? subcategories[0].name : "")
   );
   const [language, setLanguage] = useState("fr");
   const [postType, setPostType] = useState("article");
@@ -57,17 +55,17 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
       // Upload all files
       const uploadedFiles = [];
       for (const file of files) {
-        const fileRef = ref(storage, `posts/${user.uid}/${Date.now()}_${file.name}`);
-        await uploadBytes(fileRef, file);
-        const url = await getDownloadURL(fileRef);
-        
+        // Use local API for upload
+        const uploadRes = await api.upload(file);
+        const url = uploadRes.url;
+
         // Déterminer le type de fichier
         let fileType = 'other';
         if (file.type.startsWith('image/')) fileType = 'image';
         else if (file.type.startsWith('video/')) fileType = 'video';
         else if (file.type === 'application/pdf') fileType = 'pdf';
         else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) fileType = 'document';
-        
+
         uploadedFiles.push({
           name: file.name,
           url,
@@ -77,21 +75,26 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
         });
       }
 
-      const authorName = profile?.fullName || user.displayName || user.email || "Utilisateur";
-      
-      await addDoc(collection(db, "posts"), {
+      // Determine category slug
+      let categorySlug = fixedCategorySlug;
+      if (!categorySlug) {
+        const catObj = CATEGORIES.find(c => c.name === category || c === category);
+        categorySlug = catObj?.slug || category.toLowerCase().replace(/\s+/g, '-');
+      }
+
+      const postId = crypto.randomUUID();
+
+      await api.posts.create({
+        id: postId,
+        author_id: user.uid,
+        category_slug: categorySlug,
+        subcategory: subcategory || fixedSubcategory,
         title: title.trim(),
         content: content.trim(),
-        category,
-        subcategory,
+        image_url: uploadedFiles.length > 0 ? uploadedFiles[0].url : null,
+        files: uploadedFiles,
         language,
         postType,
-        status: "published",
-        files: uploadedFiles,
-        authorId: user.uid,
-        authorName,
-        authorNameLower: authorName.toLowerCase(),
-        createdAt: serverTimestamp(),
       });
 
       setTitle("");
@@ -125,6 +128,8 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
   };
 
   const getFileIcon = (file) => {
+    // Basic catch if file object structure differs after upload vs selection, 
+    // but here 'files' state holds File objects which have 'type'
     if (file.type.startsWith('image/')) return '🖼️';
     if (file.type.startsWith('video/')) return '🎥';
     if (file.type === 'application/pdf') return '📕';
@@ -134,8 +139,8 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
 
   return (
     <>
-      <form 
-        className="card form" 
+      <form
+        className="card form"
         onSubmit={handleSubmit}
         style={{
           background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
@@ -149,9 +154,9 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
           flexDirection: "column"
         }}
       >
-        <div style={{ 
-          position: "sticky", 
-          top: 0, 
+        <div style={{
+          position: "sticky",
+          top: 0,
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           zIndex: 10,
           padding: "1.5rem 2rem",
@@ -175,9 +180,9 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
               {isPreview ? "👁️" : "✍️"}
             </div>
             <div>
-              <h3 style={{ 
-                margin: 0, 
-                color: "#ffffff", 
+              <h3 style={{
+                margin: 0,
+                color: "#ffffff",
                 fontSize: "1.5rem",
                 fontWeight: "700",
                 textShadow: "0 2px 4px rgba(0,0,0,0.2)"
@@ -228,8 +233,8 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
               <span style={{ fontSize: "1.1rem" }}>{isPreview ? "✏️" : "👁️"}</span>
               {isPreview ? "Éditer" : "Aperçu"}
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={handleClose}
               style={{
                 background: "rgba(239, 68, 68, 0.2)",
@@ -296,7 +301,7 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
                   <span style={{ fontSize: "1.25rem" }}>📝</span>
                   Informations principales
                 </h4>
-                
+
                 <div>
                   <label style={{
                     display: "block",
@@ -420,10 +425,10 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
                   Classification
                 </h4>
 
-                <div style={{ 
-                  display: "grid", 
-                  gridTemplateColumns: "1fr 1fr", 
-                  gap: "1.5rem" 
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1.5rem"
                 }}>
                   {subcategories && subcategories.length > 0 ? (
                     <div>
@@ -438,8 +443,8 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
                       }}>
                         📂 Sous-catégorie
                       </label>
-                      <select 
-                        value={subcategory} 
+                      <select
+                        value={subcategory}
                         onChange={(e) => setSubcategory(e.target.value)}
                         style={{
                           width: "100%",
@@ -474,8 +479,8 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
                       }}>
                         📂 Type
                       </label>
-                      <select 
-                        value={subcategory} 
+                      <select
+                        value={subcategory}
                         onChange={(e) => setSubcategory(e.target.value)}
                         style={{
                           width: "100%",
@@ -508,8 +513,8 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
                     }}>
                       📝 Type d'article
                     </label>
-                    <select 
-                      value={postType} 
+                    <select
+                      value={postType}
                       onChange={(e) => setPostType(e.target.value)}
                       style={{
                         width: "100%",
@@ -623,326 +628,310 @@ export default function NewPostForm({ fixedCategory = null, subcategories = [], 
                   Pièces jointes
                 </h4>
 
-              <div style={{
-                padding: "1.5rem",
-                background: "rgba(102, 126, 234, 0.1)",
-                border: "2px dashed rgba(102, 126, 234, 0.3)",
-                borderRadius: "16px",
-                transition: "all 0.3s ease"
-              }}>
-                <label style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  marginBottom: "0.75rem",
-                  fontWeight: "700",
-                  fontSize: "0.875rem",
-                  color: "#e2e8f0",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  cursor: "pointer"
+                <div style={{
+                  padding: "1.5rem",
+                  background: "rgba(102, 126, 234, 0.1)",
+                  border: "2px dashed rgba(102, 126, 234, 0.3)",
+                  borderRadius: "16px",
+                  transition: "all 0.3s ease"
                 }}>
-                  <div style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "10px",
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  <label style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "1.25rem",
-                    boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"
-                  }}>
-                    📎
-                  </div>
-                  <div>
-                    <div>Fichiers joints</div>
-                    <div style={{
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      textTransform: "none",
-                      fontWeight: "400",
-                      marginTop: "0.125rem"
-                    }}>
-                      Images, Vidéos, PDF, Documents...
-                    </div>
-                  </div>
-                </label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx"
-                  onChange={handleFileChange}
-                  style={{
-                    width: "100%",
-                    padding: "1rem",
-                    border: "2px solid rgba(102, 126, 234, 0.3)",
-                    borderRadius: "10px",
-                    cursor: "pointer",
-                    background: "rgba(15, 23, 42, 0.5)",
-                    color: "#94a3b8",
+                    gap: "0.75rem",
+                    marginBottom: "0.75rem",
+                    fontWeight: "700",
                     fontSize: "0.875rem",
-                    transition: "all 0.3s ease"
-                  }}
-                />
-              </div>
-
-              {files.length > 0 && (
-                <div style={{ 
-                  background: "rgba(15, 23, 42, 0.5)", 
-                  padding: "1.25rem", 
-                  borderRadius: "16px", 
-                  border: "1px solid rgba(102, 126, 234, 0.3)"
-                }}>
-                  <div style={{ 
-                    fontSize: "0.875rem", 
-                    fontWeight: "700", 
-                    marginBottom: "1rem", 
                     color: "#e2e8f0",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
                     textTransform: "uppercase",
-                    letterSpacing: "0.05em"
+                    letterSpacing: "0.05em",
+                    cursor: "pointer"
                   }}>
                     <div style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "8px",
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "10px",
                       background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "1rem"
+                      fontSize: "1.25rem",
+                      boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"
                     }}>
-                      📁
+                      📎
                     </div>
-                    Fichiers sélectionnés ({files.length})
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    {files.map((file, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "1rem",
-                          background: "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
-                          borderRadius: "12px",
-                          border: "1px solid rgba(102, 126, 234, 0.2)",
-                          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)";
-                          e.currentTarget.style.borderColor = "rgba(102, 126, 234, 0.4)";
-                          e.currentTarget.style.transform = "translateX(4px)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)";
-                          e.currentTarget.style.borderColor = "rgba(102, 126, 234, 0.2)";
-                          e.currentTarget.style.transform = "translateX(0)";
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "1rem", flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            width: "48px",
-                            height: "48px",
-                            borderRadius: "10px",
-                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "1.5rem",
-                            flexShrink: 0,
-                            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)"
-                          }}>
-                            {getFileIcon(file)}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ 
-                              fontSize: "0.875rem",
-                              fontWeight: "600",
-                              color: "#f1f5f9",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              marginBottom: "0.25rem"
-                            }}>
-                              {file.name}
-                            </div>
-                            <div style={{ 
-                              fontSize: "0.75rem",
-                              color: "#94a3b8",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.5rem"
-                            }}>
-                              <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                              <span>•</span>
-                              <span style={{ 
-                                padding: "0.125rem 0.5rem",
-                                background: "rgba(102, 126, 234, 0.3)",
-                                borderRadius: "6px",
-                                fontSize: "0.7rem",
-                                fontWeight: "600",
-                                textTransform: "uppercase"
-                              }}>
-                                {file.type.split('/')[0]}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(idx)}
+                    <div>
+                      <div>Fichiers joints</div>
+                      <div style={{
+                        fontSize: "0.75rem",
+                        color: "#94a3b8",
+                        textTransform: "none",
+                        fontWeight: "400",
+                        marginTop: "0.125rem"
+                      }}>
+                        Images, Vidéos, PDF, Documents...
+                      </div>
+                    </div>
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx"
+                    onChange={handleFileChange}
+                    style={{
+                      width: "100%",
+                      padding: "1rem",
+                      border: "2px solid rgba(102, 126, 234, 0.3)",
+                      borderRadius: "10px",
+                      cursor: "pointer",
+                      background: "rgba(15, 23, 42, 0.5)",
+                      color: "#94a3b8",
+                      fontSize: "0.875rem",
+                      transition: "all 0.3s ease"
+                    }}
+                  />
+                </div>
+
+                {files.length > 0 && (
+                  <div style={{
+                    background: "rgba(15, 23, 42, 0.5)",
+                    padding: "1.25rem",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(102, 126, 234, 0.3)"
+                  }}>
+                    <div style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "700",
+                      marginBottom: "1rem",
+                      color: "#e2e8f0",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em"
+                    }}>
+                      <div style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "8px",
+                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "1rem"
+                      }}>
+                        📁
+                      </div>
+                      Fichiers sélectionnés ({files.length})
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                      {files.map((file, idx) => (
+                        <div
+                          key={idx}
                           style={{
-                            background: "rgba(239, 68, 68, 0.2)",
-                            border: "1px solid rgba(239, 68, 68, 0.3)",
-                            borderRadius: "10px",
-                            padding: "0.5rem 0.875rem",
-                            cursor: "pointer",
-                            fontSize: "0.875rem",
-                            color: "#fca5a5",
-                            fontWeight: "700",
-                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                            flexShrink: 0,
                             display: "flex",
                             alignItems: "center",
-                            gap: "0.375rem"
+                            justifyContent: "space-between",
+                            padding: "1rem",
+                            background: "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
+                            borderRadius: "12px",
+                            border: "1px solid rgba(102, 126, 234, 0.2)",
+                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
                           }}
                           onMouseEnter={(e) => {
-                            e.target.style.background = "rgba(239, 68, 68, 0.3)";
-                            e.target.style.borderColor = "rgba(239, 68, 68, 0.5)";
-                            e.target.style.color = "#fee2e2";
-                            e.target.style.transform = "scale(1.05)";
+                            e.currentTarget.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)";
+                            e.currentTarget.style.borderColor = "rgba(102, 126, 234, 0.4)";
+                            e.currentTarget.style.transform = "translateX(4px)";
                           }}
                           onMouseLeave={(e) => {
-                            e.target.style.background = "rgba(239, 68, 68, 0.2)";
-                            e.target.style.borderColor = "rgba(239, 68, 68, 0.3)";
-                            e.target.style.color = "#fca5a5";
-                            e.target.style.transform = "scale(1)";
+                            e.currentTarget.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)";
+                            e.currentTarget.style.borderColor = "rgba(102, 126, 234, 0.2)";
+                            e.currentTarget.style.transform = "translateX(0)";
                           }}
                         >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
+                          <div style={{ display: "flex", alignItems: "center", gap: "1rem", flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              width: "48px",
+                              height: "48px",
+                              borderRadius: "10px",
+                              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "1.5rem",
+                              flexShrink: 0,
+                              boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)"
+                            }}>
+                              {getFileIcon(file)}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#f1f5f9",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                marginBottom: "0.25rem"
+                              }}>
+                                {file.name}
+                              </div>
+                              <div style={{
+                                fontSize: "0.75rem",
+                                color: "#94a3b8",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem"
+                              }}>
+                                <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                                <span>•</span>
+                                <span style={{
+                                  padding: "0.125rem 0.5rem",
+                                  background: "rgba(102, 126, 234, 0.3)",
+                                  borderRadius: "6px",
+                                  fontSize: "0.7rem",
+                                  fontWeight: "600",
+                                  textTransform: "uppercase"
+                                }}>
+                                  {file.type.split('/')[0]}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(idx)}
+                            style={{
+                              border: "none",
+                              background: "none",
+                              color: "#e2e8f0",
+                              cursor: "pointer",
+                              padding: "0.5rem",
+                              borderRadius: "8px",
+                              transition: "all 0.3s ease",
+                              opacity: 0.7
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.opacity = "1";
+                              e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                              e.currentTarget.style.transform = "scale(1.1)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = "0.7";
+                              e.currentTarget.style.background = "none";
+                              e.currentTarget.style.transform = "scale(1)";
+                            }}
+                          >
+                            ❌
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-
+              {/* SECTION: Actions */}
+              <div style={{
+                display: "flex",
+                gap: "1rem",
+                marginTop: "1.5rem",
+                paddingTop: "2rem",
+                borderTop: "1px solid rgba(102, 126, 234, 0.2)",
+                justifyContent: "flex-end"
+              }}>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={busy}
+                  className="btn"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "12px",
+                    padding: "1rem 2rem",
+                    color: "#e2e8f0",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    fontSize: "1rem",
+                    transition: "all 0.3s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "rgba(255, 255, 255, 0.1)";
+                    e.target.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "rgba(255, 255, 255, 0.05)";
+                    e.target.style.transform = "translateY(0)";
+                  }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="btn btn-primary"
+                  style={{
+                    background: busy ? "#64748b" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    border: "none",
+                    borderRadius: "12px",
+                    padding: "1rem 3rem",
+                    color: "#ffffff",
+                    fontWeight: "700",
+                    fontSize: "1rem",
+                    cursor: busy ? "not-allowed" : "pointer",
+                    boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em"
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!busy) {
+                      e.target.style.transform = "translateY(-2px) scale(1.02)";
+                      e.target.style.boxShadow = "0 8px 25px rgba(102, 126, 234, 0.5)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!busy) {
+                      e.target.style.transform = "translateY(0) scale(1)";
+                      e.target.style.boxShadow = "0 4px 15px rgba(102, 126, 234, 0.4)";
+                    }
+                  }}
+                >
+                  {busy ? (
+                    <>
+                      <span className="spinner" style={{ width: "20px", height: "20px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", borderRadius: "50%", animation: "spin 1s linear infinite" }}></span>
+                      Publication...
+                    </>
+                  ) : (
+                    <>
+                      <span>🚀</span>
+                      Publier maintenant
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>
-
-        <div style={{
-          padding: "1.5rem 2rem",
-          background: "rgba(15, 23, 42, 0.8)",
-          borderTop: "1px solid rgba(102, 126, 234, 0.3)",
-          display: "flex",
-          gap: "1rem",
-          justifyContent: "flex-end",
-          position: "sticky",
-          bottom: 0,
-          backdropFilter: "blur(10px)"
-        }}>
-          <button 
-            type="button"
-            onClick={handleClose}
-            style={{
-              padding: "1rem 2rem",
-              fontSize: "1rem",
-              fontWeight: "600",
-              borderRadius: "12px",
-              border: "2px solid rgba(148, 163, 184, 0.3)",
-              background: "transparent",
-              color: "#94a3b8",
-              cursor: "pointer",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = "rgba(148, 163, 184, 0.1)";
-              e.target.style.borderColor = "rgba(148, 163, 184, 0.5)";
-              e.target.style.color = "#cbd5e1";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = "transparent";
-              e.target.style.borderColor = "rgba(148, 163, 184, 0.3)";
-              e.target.style.color = "#94a3b8";
-            }}
-          >
-            Annuler
-          </button>
-          <button 
-            type="submit" 
-            disabled={busy}
-            style={{
-              padding: "1rem 2.5rem",
-              fontSize: "1rem",
-              fontWeight: "700",
-              borderRadius: "12px",
-              border: "none",
-              background: busy 
-                ? "rgba(148, 163, 184, 0.3)" 
-                : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              color: "#ffffff",
-              cursor: busy ? "not-allowed" : "pointer",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              boxShadow: busy 
-                ? "none" 
-                : "0 8px 24px rgba(102, 126, 234, 0.4)",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              opacity: busy ? 0.6 : 1
-            }}
-            onMouseEnter={(e) => {
-              if (!busy) {
-                e.target.style.transform = "translateY(-2px)";
-                e.target.style.boxShadow = "0 12px 32px rgba(102, 126, 234, 0.5)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!busy) {
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "0 8px 24px rgba(102, 126, 234, 0.4)";
-              }
-            }}
-          >
-            {busy ? (
-              <>
-                <span style={{ 
-                  width: "16px", 
-                  height: "16px", 
-                  border: "2px solid rgba(255,255,255,0.3)",
-                  borderTop: "2px solid #fff",
-                  borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite"
-                }}></span>
-                Publication...
-              </>
-            ) : (
-              <>
-                <span style={{ fontSize: "1.25rem" }}>🚀</span>
-                Publier le post
-              </>
-            )}
-          </button>
-        </div>
       </form>
 
-      <CancelAlertModal
-        show={showCancelAlert}
-        onCancel={() => setShowCancelAlert(false)}
-        onConfirm={() => {
-          setShowCancelAlert(false);
-          onSuccess?.();
-        }}
-      />
+      {showCancelAlert && (
+        <CancelAlertModal
+          onConfirm={() => onSuccess?.()}
+          onCancel={() => setShowCancelAlert(false)}
+        />
+      )}
+
+      {/* Styles pour l'animation spin */}
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 }
-

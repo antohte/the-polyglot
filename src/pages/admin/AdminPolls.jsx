@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, deleteDoc, addDoc, Timestamp } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import "../../styles/Admin.css";
 
 export default function AdminPolls() {
+    const { user } = useAuth();
     const [polls, setPolls] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -19,8 +20,7 @@ export default function AdminPolls() {
 
     const fetchPolls = async () => {
         try {
-            const snap = await getDocs(collection(db, "polls"));
-            const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+            const data = await api.polls.getAll();
             setPolls(data);
         } catch (err) {
             console.error("Error fetching polls:", err);
@@ -32,7 +32,7 @@ export default function AdminPolls() {
     const handleDelete = async (pollId) => {
         if (!window.confirm("Supprimer ce sondage ?")) return;
         try {
-            await deleteDoc(doc(db, "polls", pollId));
+            await api.polls.delete(pollId);
             setPolls((prev) => prev.filter((p) => p.id !== pollId));
         } catch (err) {
             console.error("Error deleting poll:", err);
@@ -56,21 +56,26 @@ export default function AdminPolls() {
         e.preventDefault();
 
         // Filter empty options
-        const validOptions = options.filter(o => o.trim() !== "").map(text => ({ text, votes: 0 }));
+        const validOptions = options.filter(o => o.trim() !== "");
         if (validOptions.length < 2) {
             alert("Il faut au moins 2 options valides.");
             return;
         }
 
         try {
-            const docData = {
+            const newPoll = {
+                id: crypto.randomUUID(),
+                created_by: user?.uid,
                 question,
                 options: validOptions,
-                createdAt: Timestamp.now()
+                expires_at: null // or add field for expiration
             };
 
-            const ref = await addDoc(collection(db, "polls"), docData);
-            setPolls([...polls, { id: ref.id, ...docData }]);
+            await api.polls.create(newPoll);
+
+            // Reload to get properly formatted data with empty votes
+            await fetchPolls();
+
             setShowForm(false);
             setQuestion("");
             setOptions(["", ""]);
@@ -211,20 +216,20 @@ export default function AdminPolls() {
                             </tr>
                         ) : (
                             filteredPolls.map((poll) => {
-                            const totalVotes = poll.options?.reduce((acc, curr) => acc + (curr.votes || 0), 0) || 0;
-                            return (
-                                <tr key={poll.id}>
-                                    <td>{poll.question}</td>
-                                    <td>{poll.options?.length || 0} options</td>
-                                    <td>{totalVotes}</td>
-                                    <td>
-                                        <button className="admin-btn btn-danger" onClick={() => handleDelete(poll.id)}>
-                                            Supprimer
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })
+                                const totalVotes = poll.options?.reduce((acc, curr) => acc + (curr.votes || 0), 0) || 0;
+                                return (
+                                    <tr key={poll.id}>
+                                        <td>{poll.question}</td>
+                                        <td>{poll.options?.length || 0} options</td>
+                                        <td>{totalVotes}</td>
+                                        <td>
+                                            <button className="admin-btn btn-danger" onClick={() => handleDelete(poll.id)}>
+                                                Supprimer
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>

@@ -1,0 +1,144 @@
+  // Photo upload handler
+  function handlePhotoChange(e) {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("La photo ne doit pas dépasser 5 MB.");
+        return;
+      }
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // UI Sections to add after line 314 (after personal info section):
+
+  {/* Section Photo de profil */}
+  <div className="profile-section">
+    <div className="section-header">
+      <h2>📸 Photo de profil</h2>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', padding: '1rem' }}>
+      <div style={{ 
+        width: '120px', 
+        height: '120px', 
+        borderRadius: '50%', 
+        background: photoPreview || profilePhoto ? `url(${photoPreview || profilePhoto}) center/cover` : 'linear-gradient(135deg, #6366f1, #a855f7)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '3rem',
+        color: 'white',
+        fontWeight: 'bold',
+        border: '4px solid rgba(255,255,255,0.1)'
+      }}>
+        {!photoPreview && !profilePhoto && fullName.charAt(0).toUpperCase()}
+      </div>
+      <div style={{ flex: 1 }}>
+        <input 
+          type="file" 
+          accept="image/*" 
+          onChange={handlePhotoChange}
+          style={{ display: 'none' }}
+          id="photo-upload"
+        />
+        <label htmlFor="photo-upload" className="btn btn-primary" style={{ cursor: 'pointer', display: 'inline-block' }}>
+          📷 Choisir une photo
+        </label>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+          Format: JPG, PNG. Taille max: 5 MB
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {/* Section Bio */}
+  <div className="profile-section">
+    <div className="section-header">
+      <h2>📝 Bio</h2>
+    </div>
+    {editMode ? (
+      <div className="form-group">
+        <textarea
+          className="ui-input"
+          rows={5}
+          maxLength={500}
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Parlez-nous de vous..."
+          style={{ resize: 'vertical' }}
+        />
+        <div style={{ textAlign: 'right', color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+          {bio.length}/500 caractères
+        </div>
+      </div>
+    ) : (
+      <div className="profile-display">
+        <p style={{ whiteSpace: 'pre-wrap', color: '#cbd5e1' }}>
+          {bio || "Aucune bio renseignée"}
+        </p>
+      </div>
+    )}
+  </div>
+
+  {/* Section Localisation & Intérêts */}
+  <div className="profile-section">
+    <div className="section-header">
+      <h2>🌍 Localisation & Intérêts</h2>
+    </div>
+    {editMode ? (
+      <div>
+        <div className="form-group">
+          <label>📍 Localisation</label>
+          <input
+            className="ui-input"
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="Paris, France"
+          />
+        </div>
+        <div className="form-group">
+          <label>🏷️ Centres d'intérêt</label>
+          <input
+            className="ui-input"
+            type="text"
+            value={interests}
+            onChange={(e) => setInterests(e.target.value)}
+            placeholder="Langues, Voyages, Musique..."
+          />
+          <small style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+            Séparez par des virgules
+          </small>
+        </div>
+      </div>
+    ) : (
+      <div className="profile-display">
+        <div className="info-row">
+          <label>📍 Localisation</label>
+          <p>{location || "Non renseigné"}</p>
+        </div>
+        <div className="info-row">
+          <label>🏷️ Centres d'intérêt</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+            {interests ? interests.split(',').map((interest, idx) => (
+              <span key={idx} style={{
+                background: 'rgba(99, 102, 241, 0.1)',
+                color: '#818cf8',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '20px',
+                fontSize: '0.9rem',
+                border: '1px solid rgba(99, 102, 241, 0.2)'
+              }}>
+                {interest.trim()}
+              </span>
+            )) : <p>Non renseigné</p>}
+          </div>
+        </div>
+      </div>
+    )}
+  </div>

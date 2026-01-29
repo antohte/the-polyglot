@@ -1,8 +1,7 @@
 // src/pages/PostDetail.jsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, deleteDoc, setDoc, getDoc as getDocSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import ReportModal from '../components/ReportModal';
 import '../styles/PostDetail.css';
@@ -21,59 +20,52 @@ export default function PostDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
-  // Charger le post
+  // Charger les données
   useEffect(() => {
+    let mounted = true;
     if (!postId) return;
 
-    const postRef = doc(db, 'posts', postId);
-    const unsubPost = onSnapshot(postRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setPost({ id: docSnap.id, ...docSnap.data() });
-        setLoading(false);
-      } else {
-        setLoading(false);
+    async function loadData() {
+      try {
+        // Load Post
+        const postData = await api.posts.get(postId);
+        if (mounted) {
+          setPost(postData);
+
+          // Load Likes
+          const likesData = await api.posts.getLikes(postId);
+          setLikeCount(likesData.count);
+          if (user && likesData.user_ids.includes(user.uid)) {
+            setLiked(true);
+          }
+
+          // Load Comments
+          const commentsData = await api.posts.getComments(postId);
+          setComments(commentsData);
+        }
+      } catch (err) {
+        console.error("Error loading post details:", err);
+        // Assuming 404 sets post to null, handled by render
+      } finally {
+        if (mounted) setLoading(false);
       }
-    });
+    }
 
-    return () => unsubPost();
-  }, [postId]);
-
-  // Charger les likes
-  useEffect(() => {
-    if (!postId) return;
-
-    const likesCol = collection(db, 'posts', postId, 'likes');
-    const unsubLikes = onSnapshot(likesCol, (snap) => {
-      setLikeCount(snap.size);
-      if (user) setLiked(snap.docs.some((d) => d.id === user.uid));
-    });
-
-    return () => unsubLikes();
+    loadData();
+    return () => { mounted = false; };
   }, [postId, user]);
-
-  // Charger les commentaires
-  useEffect(() => {
-    if (!postId) return;
-
-    const commentsCol = collection(db, 'posts', postId, 'comments');
-    const unsubComments = onSnapshot(
-      query(commentsCol, orderBy('createdAt', 'asc')),
-      (snap) => {
-        setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
-    );
-
-    return () => unsubComments();
-  }, [postId]);
 
   const handleLike = async () => {
     if (!user) return alert('Connectez-vous pour liker');
-    const likeRef = doc(db, 'posts', postId, 'likes', user.uid);
-    const snap = await getDocSnapshot(likeRef);
-    if (snap.exists()) {
-      await deleteDoc(likeRef);
-    } else {
-      await setDoc(likeRef, { createdAt: serverTimestamp() });
+    try {
+      setLiked(!liked);
+      setLikeCount(prev => liked ? prev - 1 : prev + 1);
+      const res = await api.posts.toggleLike(postId, user.uid);
+      setLiked(res.liked);
+    } catch (err) {
+      console.error("Error toggling like:", err);
+      setLiked(liked);
+      setLikeCount(prev => liked ? prev + 1 : prev - 1);
     }
   };
 
@@ -84,12 +76,14 @@ export default function PostDetail() {
 
     setSubmitting(true);
     try {
-      await addDoc(collection(db, 'posts', postId, 'comments'), {
-        text: commentText.trim(),
-        authorId: user.uid,
-        authorName: user.displayName || user.email,
-        createdAt: serverTimestamp(),
-      });
+      const newComment = {
+        id: crypto.randomUUID(),
+        author_id: user.uid,
+        content: commentText.trim()
+      };
+
+      const addedComment = await api.posts.addComment(postId, newComment);
+      setComments([...comments, addedComment]);
       setCommentText('');
     } catch (e) {
       console.error(e);
@@ -128,17 +122,17 @@ export default function PostDetail() {
       <article className="post-detail">
         <div className="post-detail-header">
           <div className="post-meta">
-            <span className="post-author">{post.authorName}</span>
+            <span className="post-author">{post.author_name || "Anonyme"}</span>
             <span className="dot">•</span>
-            <span className="post-category-badge">{post.category}</span>
+            <span className="post-category-badge">{post.category_slug || "Général"}</span>
             <span className="dot">•</span>
             <span className="post-date">
-              {post.createdAt?.toDate?.()?.toLocaleDateString?.('fr-FR') || 'Récemment'}
+              {new Date(post.created_at).toLocaleDateString('fr-FR')}
             </span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <h1 className="post-detail-title">{post.title}</h1>
-            <button 
+            <button
               onClick={() => setShowReportModal(true)}
               style={{
                 background: "rgba(255, 255, 255, 0.05)",
@@ -165,174 +159,27 @@ export default function PostDetail() {
           </div>
         </div>
 
-        {post.mediaUrl && (
+        {post.image_url && (
           <div className="post-detail-media">
-            {post.mediaType === 'video' ? (
-              <video controls src={post.mediaUrl} />
-            ) : (
-              <img src={post.mediaUrl} alt={post.title} />
-            )}
+            <img src={post.image_url} alt={post.title} />
           </div>
         )}
+
+        {/* Video support placeholder if type was stored */}
+        {/* {post.mediaType === 'video' && ... } */}
 
         <div className="post-detail-content">
           <p>{post.content}</p>
         </div>
 
-        {/* Affichage des fichiers multiples */}
+        {/* Affichage des fichiers multiples - Disabled per MySQL Schema constraints */}
+        {/*
         {post.files && post.files.length > 0 && (
-          <div style={{ 
-            marginTop: "1.5rem", 
-            padding: "1.5rem", 
-            background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)", 
-            borderRadius: "16px",
-            border: "1px solid #e2e8f0"
-          }}>
-            <div style={{ 
-              fontSize: "1rem", 
-              fontWeight: "700", 
-              marginBottom: "1rem", 
-              color: "#1e293b",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem"
-            }}>
-              <span>📁</span>
-              Fichiers joints ({post.files.length})
-            </div>
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", 
-              gap: "1rem" 
-            }}>
-              {post.files.map((file, idx) => {
-                const getFileIcon = (type) => {
-                  if (type === 'image') return '🖼️';
-                  if (type === 'video') return '🎥';
-                  if (type === 'pdf') return '📕';
-                  if (type === 'document') return '📘';
-                  return '📄';
-                };
-
-                return (
-                  <a
-                    key={idx}
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      background: "#ffffff",
-                      borderRadius: "12px",
-                      border: "1px solid #e2e8f0",
-                      overflow: "hidden",
-                      textDecoration: "none",
-                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                      display: "block",
-                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)";
-                      e.currentTarget.style.transform = "translateY(-4px)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.05)";
-                      e.currentTarget.style.transform = "translateY(0)";
-                    }}
-                  >
-                    {file.type === 'image' ? (
-                      <div style={{
-                        width: "100%",
-                        height: "150px",
-                        overflow: "hidden",
-                        background: "#f8fafc"
-                      }}>
-                        <img 
-                          src={file.url} 
-                          alt={file.name}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover"
-                          }}
-                        />
-                      </div>
-                    ) : file.type === 'video' ? (
-                      <div style={{
-                        width: "100%",
-                        height: "150px",
-                        overflow: "hidden",
-                        background: "#000",
-                        position: "relative"
-                      }}>
-                        <video
-                          src={file.url}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover"
-                          }}
-                        />
-                        <div style={{
-                          position: "absolute",
-                          top: "50%",
-                          left: "50%",
-                          transform: "translate(-50%, -50%)",
-                          fontSize: "3rem",
-                          color: "white",
-                          opacity: 0.8
-                        }}>
-                          ▶
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{
-                        width: "100%",
-                        height: "150px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        fontSize: "4rem"
-                      }}>
-                        {getFileIcon(file.type)}
-                      </div>
-                    )}
-                    <div style={{ padding: "1rem" }}>
-                      <div style={{ 
-                        fontSize: "0.875rem",
-                        fontWeight: "600",
-                        color: "#1e293b",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        marginBottom: "0.25rem"
-                      }}>
-                        {file.name}
-                      </div>
-                      <div style={{ 
-                        fontSize: "0.75rem",
-                        color: "#64748b",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem"
-                      }}>
-                        <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                        <span>•</span>
-                        <span style={{ 
-                          textTransform: "uppercase",
-                          fontWeight: "600",
-                          fontSize: "0.7rem"
-                        }}>
-                          {file.type}
-                        </span>
-                      </div>
-                    </div>
-                  </a>
-                );
-              })}
-            </div>
+          <div style={{ ... }}>
+             ... 
           </div>
         )}
+        */}
 
         <div className="post-detail-actions">
           <button
@@ -382,23 +229,23 @@ export default function PostDetail() {
               comments.map((comment) => (
                 <div key={comment.id} className="comment-item">
                   <div className="comment-header">
-                    <span className="comment-author">{comment.authorName}</span>
+                    <span className="comment-author">{comment.author_name}</span>
                     <span className="comment-date">
-                      {comment.createdAt?.toDate?.()?.toLocaleDateString?.('fr-FR') || 'Récemment'}
+                      {new Date(comment.created_at).toLocaleDateString('fr-FR')}
                     </span>
                   </div>
-                  <p className="comment-text">{comment.text}</p>
+                  <p className="comment-text">{comment.content}</p>
                 </div>
               ))
             )}
           </div>
         </div>
       </article>
-      
+
       {showReportModal && (
-        <ReportModal 
-          postId={post.id} 
-          onClose={() => setShowReportModal(false)} 
+        <ReportModal
+          postId={post.id}
+          onClose={() => setShowReportModal(false)}
         />
       )}
     </div>

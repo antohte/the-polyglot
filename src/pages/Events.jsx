@@ -1,7 +1,6 @@
 // src/pages/Events.jsx
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { db } from "../firebase";
+import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import useUserProfile from "../hooks/useUserProfile";
 import EventCard from "../components/EventCard";
@@ -18,21 +17,35 @@ export default function Events() {
     const isOrganizer = profile?.role === "organizer" || profile?.role === "admin";
 
     useEffect(() => {
-        const q = query(
-            collection(db, "events"),
-            orderBy("date", "asc")
-        );
+        let mounted = true;
 
-        const unsub = onSnapshot(q, (snapshot) => {
-            const eventsData = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
-            setEvents(eventsData);
-            setLoading(false);
-        });
+        async function loadEvents() {
+            setLoading(true);
+            try {
+                const data = await api.events.getAll();
+                const mappedEvents = data.map(e => ({
+                    ...e,
+                    date: e.event_date ? new Date(e.event_date) : null,
+                    // If EventCard expects Firestore Timestamp, it might have .toDate() method usage.
+                    // If EventCard expects Date object or string, this works.
+                    // I should check EventCard.
+                    // For now, I'll provide a Date object.
+                }));
+                // Sort ascending
+                mappedEvents.sort((a, b) => (a.date > b.date ? 1 : -1));
 
-        return () => unsub();
+                if (mounted) {
+                    setEvents(mappedEvents);
+                }
+            } catch (err) {
+                console.error("Error loading events:", err);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        }
+
+        loadEvents();
+        return () => { mounted = false; };
     }, []);
 
     if (loading) {

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, deleteDoc, addDoc, Timestamp } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import "../../styles/Admin.css";
 
 export default function AdminEvents() {
+    const { user } = useAuth();
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -26,11 +27,20 @@ export default function AdminEvents() {
 
     const fetchEvents = async () => {
         try {
-            const snap = await getDocs(collection(db, "events"));
-            const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-            // Tri par date
-            data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            setEvents(data);
+            const data = await api.events.getAll();
+            // MySQL returns event_date, map it for UI if strictly needed, or just use as is for display
+            // But we need to sort
+            // data.sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+            const formatted = data.map(e => {
+                const d = new Date(e.event_date);
+                return {
+                    ...e,
+                    date: d.toISOString().split('T')[0],
+                    time: d.toTimeString().slice(0, 5),
+                    imageUrl: e.image_url // map back for UI consistency if needed
+                };
+            });
+            setEvents(formatted);
         } catch (err) {
             console.error("Error fetching events:", err);
         } finally {
@@ -41,7 +51,7 @@ export default function AdminEvents() {
     const handleDelete = async (eventId) => {
         if (!window.confirm("Supprimer cet événement ?")) return;
         try {
-            await deleteDoc(doc(db, "events", eventId));
+            await api.events.delete(eventId);
             setEvents((prev) => prev.filter((e) => e.id !== eventId));
         } catch (err) {
             console.error("Error deleting event:", err);
@@ -56,16 +66,23 @@ export default function AdminEvents() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            // Construction de l'objet événement
-            const docData = {
-                ...newEvent,
-                createdAt: Timestamp.now()
-                // La date est stockée en string YYYY-MM-DD ou on pourrait la convertir en Timestamp
-                // Pour l'instant on garde la string saisie dans le type="date"
+            const eventDateTime = `${newEvent.date} ${newEvent.time}:00`;
+
+            const payload = {
+                id: crypto.randomUUID(),
+                author_id: user?.uid,
+                title: newEvent.title,
+                description: newEvent.description, // Category is lost unless we prepend or update schema
+                event_date: eventDateTime,
+                location: newEvent.location,
+                image_url: newEvent.imageUrl
             };
 
-            const ref = await addDoc(collection(db, "events"), docData);
-            setEvents([...events, { id: ref.id, ...docData }]);
+            await api.events.create(payload);
+
+            // Refresh
+            await fetchEvents();
+
             setShowForm(false);
             setNewEvent({ title: "", date: "", time: "", location: "", description: "", imageUrl: "", category: "culture" });
         } catch (err) {
@@ -198,17 +215,17 @@ export default function AdminEvents() {
                             </tr>
                         ) : (
                             filteredEvents.map((evt) => (
-                            <tr key={evt.id}>
-                                <td>{evt.date} à {evt.time}</td>
-                                <td>{evt.title}</td>
-                                <td>{evt.location}</td>
-                                <td>
-                                    <button className="admin-btn btn-danger" onClick={() => handleDelete(evt.id)}>
-                                        Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                        ))
+                                <tr key={evt.id}>
+                                    <td>{evt.date} à {evt.time}</td>
+                                    <td>{evt.title}</td>
+                                    <td>{evt.location}</td>
+                                    <td>
+                                        <button className="admin-btn btn-danger" onClick={() => handleDelete(evt.id)}>
+                                            Supprimer
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
                         )}
                     </tbody>
                 </table>

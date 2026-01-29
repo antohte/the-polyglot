@@ -8,9 +8,10 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [fullName, setFullName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signInEmail, signUpEmail, signInGoogle } = useAuth()
+  const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -31,42 +32,30 @@ export default function Login() {
           setLoading(false)
           return
         }
+        if (!fullName.trim()) {
+          setError("Veuillez entrer votre nom complet");
+          setLoading(false);
+          return;
+        }
+
+        const allowedDomains = ['@lacatholille.fr', '@univ-catholille.fr'];
+        const lowerEmail = email.toLowerCase();
+        if (!allowedDomains.some(d => lowerEmail.endsWith(d))) {
+          setError("Veuillez utiliser votre email universitaire (@lacatholille.fr ou @univ-catholille.fr)");
+          setLoading(false);
+          return;
+        }
 
         // Créer le compte
-        await signUpEmail(email, password)
-        navigate('/') // Rediriger vers la page d'accueil
+        await signUp(email.trim(), password, fullName)
+        navigate('/')
       } else {
         // Se connecter
-        await signInEmail(email, password)
-        navigate('/') // Rediriger vers la page d'accueil
+        await signIn(email.trim(), password)
+        navigate('/')
       }
     } catch (err) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError('Cet email est déjà utilisé')
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Email invalide')
-      } else if (err.code === 'auth/wrong-password') {
-        setError('Mot de passe incorrect')
-      } else if (err.code === 'auth/user-not-found') {
-        setError('Utilisateur non trouvé')
-      } else if (err.code === 'auth/weak-password') {
-        setError('Le mot de passe est trop faible')
-      } else {
-        setError(err.message || 'Une erreur est survenue')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleGoogleSignIn = async () => {
-    setError('')
-    setLoading(true)
-    try {
-      await signInGoogle()
-      navigate('/')
-    } catch (err) {
-      setError(err.message || 'Erreur avec Google')
+      setError(err.message || 'Une erreur est survenue');
     } finally {
       setLoading(false)
     }
@@ -76,13 +65,28 @@ export default function Login() {
     <div className="login-container">
       <div className="login-box">
         <div className="login-header">
-          <h1 className="logo-login">THE<br/>Polyglot</h1>
+          <h1 className="logo-login">THE<br />Polyglot</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           <h2>{isSignUp ? 'S\'inscrire' : 'Se connecter'}</h2>
 
           {error && <div className="error-message">{error}</div>}
+
+          {isSignUp && (
+            <div className="form-group">
+              <label htmlFor="fullName">Nom complet</label>
+              <input
+                type="text"
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Ex: Jean Dupont"
+                required
+                disabled={loading}
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="email">Email</label>
@@ -129,16 +133,6 @@ export default function Login() {
             {loading ? 'Chargement...' : (isSignUp ? 'S\'inscrire' : 'Se connecter')}
           </button>
         </form>
-
-        <div className="divider">OU</div>
-
-        <button
-          onClick={handleGoogleSignIn}
-          className="btn btn-google"
-          disabled={loading}
-        >
-          {loading ? 'Chargement...' : '🔐 Continuer avec Google'}
-        </button>
 
         <p className="toggle-text">
           {isSignUp ? 'Vous avez déjà un compte? ' : 'Pas encore de compte? '}

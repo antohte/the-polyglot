@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { collection, query, where, getDocs, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
+import { api } from "../api/client";
 import { CATEGORIES } from "../constants/categories";
 import PostCard from "../components/PostCard";
 import NewPostForm from "../components/NewPostForm";
@@ -12,6 +11,7 @@ function Category() {
     const { slug } = useParams();
     const { user } = useAuth();
     const [posts, setPosts] = useState([]);
+    const [allPosts, setAllPosts] = useState([]); // Store all posts for counts
     const [postsLoading, setPostsLoading] = useState(false);
     const [categoryLoading, setCategoryLoading] = useState(true);
     const [showNewPost, setShowNewPost] = useState(false);
@@ -21,122 +21,134 @@ function Category() {
     const [searchSubcategory, setSearchSubcategory] = useState("");
     const [subcategoryCounts, setSubcategoryCounts] = useState({});
 
-    // Charger la catégorie et fusionner avec Firestore
+    // Charger la catégorie et ses sous-catégories
     useEffect(() => {
-        const categoriesRef = collection(db, "categories");
-        const q = query(categoriesRef, where("slug", "==", slug));
-        
-        // Écouter en temps réel les changements dans Firestore
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            // Chercher dans les catégories statiques
-            const staticCategory = CATEGORIES.find((cat) => cat.slug === slug);
-            
-            if (!snapshot.empty) {
-                // Document Firestore existe : utiliser ses données
-                const firestoreData = snapshot.docs[0].data();
-                const cat = {
-                    ...staticCategory,
-                    id: snapshot.docs[0].id,
-                    subcategories: firestoreData.subcategories || [],
-                    type: staticCategory ? 'static' : 'dynamic'
-                };
-                setCategory(cat);
-                
-                // Sélectionner la première sous-catégorie
-                if (cat.subcategories.length > 0) {
-                    setSelectedSubcategory(cat.subcategories[0].name);
+        let mounted = true;
+
+        async function loadCategory() {
+            setCategoryLoading(true);
+            try {
+                // Fetch all categories (flat list)
+                const allCats = await api.categories.getAll();
+
+                // Find current category
+                const foundCat = allCats.find(c => c.slug === slug);
+                const staticCategory = CATEGORIES.find((cat) => cat.slug === slug);
+
+                if (foundCat) {
+                    // Find children (subcategories)
+                    const children = allCats.filter(c => c.parent_id === foundCat.id);
+
+                    // Merge with static subcategories if any (avoid dupes by name/slug?)
+                    // Assuming API is source of truth, but if static has extra...
+                    // For now, let's rely on API children + static children if needed.
+                    // But if migrated, API children should cover it.
+
+                    // Construct category object
+                    const catObj = {
+                        ...foundCat,
+                        type: staticCategory ? 'static' : 'dynamic',
+                        subcategories: children.map(child => ({
+                            name: child.name,
+                            slug: child.slug,
+                            createdByName: child.created_by_name || "Admin", // If joined
+                            description: child.description
+                        })),
+                        icon: staticCategory?.icon || "📁"
+                    };
+
+                    // If no DB children found, but static has some? 
+                    // Migration should have handled it. If not, fallback to static.
+                    if (children.length === 0 && staticCategory?.subcategories) {
+                        catObj.subcategories = staticCategory.subcategories;
+                    }
+
+                    if (mounted) {
+                        setCategory(catObj);
+                        if (catObj.subcategories.length > 0) {
+                            setSelectedSubcategory(catObj.subcategories[0].name);
+                        } else {
+                            setSelectedSubcategory("");
+                        }
+                    }
+                } else if (staticCategory) {
+                    // Only static exists (no DB record yet?)
+                    if (mounted) {
+                        setCategory({
+                            ...staticCategory,
+                            type: 'static',
+                            subcategories: staticCategory.subcategories || []
+                        });
+                        if (staticCategory.subcategories?.length > 0) {
+                            setSelectedSubcategory(staticCategory.subcategories[0].name);
+                        } else {
+                            setSelectedSubcategory("");
+                        }
+                    }
                 } else {
-                    setSelectedSubcategory("");
+                    if (mounted) setCategory(null);
                 }
-            } else if (staticCategory) {
-                // Pas de document Firestore, mais catégorie statique existe
-                const cat = { 
-                    ...staticCategory, 
-                    type: 'static',
-                    subcategories: staticCategory.subcategories || []
-                };
-                setCategory(cat);
-                
-                if (cat.subcategories.length > 0) {
-                    setSelectedSubcategory(cat.subcategories[0].name);
-                } else {
-                    setSelectedSubcategory("");
-                }
-            } else {
-                // Aucune catégorie trouvée
-                setCategory(null);
+            } catch (err) {
+                console.error("Error loading categories:", err);
+            } finally {
+                if (mounted) setCategoryLoading(false);
             }
-            
-            setCategoryLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [slug]);
-
-    // Charger tous les posts de la catégorie pour le compteur
-    useEffect(() => {
-        if (!category) return;
-
-        const postsRef = collection(db, "posts");
-        const q = query(
-            postsRef,
-            where("category", "==", category.name),
-            orderBy("createdAt", "desc")
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            // Compter tous les posts par sous-catégorie
-            const counts = {};
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                if (data.subcategory) {
-                    counts[data.subcategory] = (counts[data.subcategory] || 0) + 1;
-                }
-            });
-            setSubcategoryCounts(counts);
-        });
-
-        return () => unsubscribe();
-    }, [category]);
-
-    // Charger les posts de la sous-catégorie sélectionnée
-    useEffect(() => {
-        if (!category) return;
-        
-        // Ne charger les posts QUE si une sous-catégorie est sélectionnée
-        if (!selectedSubcategory) {
-            setPosts([]);
-            setPostsLoading(false);
-            return;
         }
 
-        setPostsLoading(true);
-        const postsRef = collection(db, "posts");
-        
-        // Filtrer par sous-catégorie sélectionnée
-        const q = query(
-            postsRef,
-            where("category", "==", category.name),
-            where("subcategory", "==", selectedSubcategory),
-            orderBy("createdAt", "desc")
-        );
+        loadCategory();
+        return () => { mounted = false; };
+    }, [slug]);
 
-        // Listener en temps réel pour les posts
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const postsData = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
+    // Charger les posts
+    useEffect(() => {
+        let mounted = true;
+        if (!category) return;
 
-            setPosts(postsData);
-            setPostsLoading(false);
-        }, (error) => {
-            console.error("Erreur lors du chargement des posts:", error);
-            setPostsLoading(false);
-        });
+        async function loadPosts() {
+            setPostsLoading(true);
+            try {
+                const data = await api.posts.getAll({ category: slug });
+                if (mounted) {
+                    setAllPosts(data);
 
-        return () => unsubscribe();
-    }, [category, selectedSubcategory]);
+                    // Calculate counts
+                    const counts = {};
+                    data.forEach(p => {
+                        if (p.subcategory) {
+                            counts[p.subcategory] = (counts[p.subcategory] || 0) + 1;
+                        }
+                    });
+                    setSubcategoryCounts(counts);
+
+                    // Filter for selected subcategory
+                    if (selectedSubcategory) {
+                        setPosts(data.filter(p => p.subcategory === selectedSubcategory));
+                    } else {
+                        setPosts([]);
+                    }
+                }
+            } catch (err) {
+                console.error("Error loading posts:", err);
+            } finally {
+                if (mounted) setPostsLoading(false);
+            }
+        }
+
+        loadPosts();
+        return () => { mounted = false; };
+    }, [category, slug]); // Reload if category or slug changes
+
+    // Re-filter when selectedSubcategory changes without re-fetching
+    useEffect(() => {
+        if (!selectedSubcategory) {
+            setPosts([]);
+            return;
+        }
+        if (allPosts.length > 0) {
+            setPosts(allPosts.filter(p => p.subcategory === selectedSubcategory));
+        }
+    }, [selectedSubcategory, allPosts]);
+
 
     if (categoryLoading) {
         return (
@@ -156,7 +168,7 @@ function Category() {
     }
 
     const subcategories = category.subcategories || [];
-    
+
     // Filtrer les sous-catégories par la recherche
     const filteredSubcategories = subcategories.filter(sub =>
         sub.name.toLowerCase().includes(searchSubcategory.toLowerCase())
@@ -179,7 +191,7 @@ function Category() {
             {subcategories.length > 0 && (
                 <div style={{ marginBottom: "2rem" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-                        <h3 style={{ 
+                        <h3 style={{
                             fontSize: "1.5rem",
                             fontWeight: "700",
                             background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -193,7 +205,7 @@ function Category() {
                             <button
                                 onClick={() => setShowSubcategoryModal(true)}
                                 className="btn btn-primary"
-                                style={{ 
+                                style={{
                                     fontSize: "0.9rem",
                                     padding: "0.75rem 1.25rem",
                                     display: "flex",
@@ -209,7 +221,7 @@ function Category() {
                     </div>
 
                     {/* Barre de recherche améliorée */}
-                    <div style={{ 
+                    <div style={{
                         position: "relative",
                         marginBottom: "1.5rem"
                     }}>
@@ -280,7 +292,7 @@ function Category() {
                     </div>
 
                     {filteredSubcategories.length > 0 ? (
-                        <div style={{ 
+                        <div style={{
                             display: "grid",
                             gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
                             gap: "1rem"
@@ -288,7 +300,7 @@ function Category() {
                             {filteredSubcategories.map((sub) => {
                                 const postCount = subcategoryCounts[sub.name] || 0;
                                 const isSelected = selectedSubcategory === sub.name;
-                                
+
                                 return (
                                     <div
                                         key={sub.slug}
@@ -296,8 +308,8 @@ function Category() {
                                         style={{
                                             padding: "1.5rem",
                                             borderRadius: "16px",
-                                            background: isSelected 
-                                                ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
+                                            background: isSelected
+                                                ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
                                                 : "linear-gradient(135deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.6) 100%)",
                                             border: "2px solid",
                                             borderColor: isSelected ? "transparent" : "#334155",
@@ -305,13 +317,13 @@ function Category() {
                                             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                                             position: "relative",
                                             overflow: "hidden",
-                                            boxShadow: isSelected 
+                                            boxShadow: isSelected
                                                 ? "0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.1) inset"
                                                 : "0 2px 8px rgba(0, 0, 0, 0.2)"
                                         }}
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.transform = "translateY(-4px) scale(1.02)";
-                                            e.currentTarget.style.boxShadow = isSelected 
+                                            e.currentTarget.style.boxShadow = isSelected
                                                 ? "0 12px 32px rgba(102, 126, 234, 0.5), 0 0 0 1px rgba(102, 126, 234, 0.2) inset"
                                                 : "0 8px 24px rgba(102, 126, 234, 0.3)";
                                             if (!isSelected) {
@@ -320,7 +332,7 @@ function Category() {
                                         }}
                                         onMouseLeave={(e) => {
                                             e.currentTarget.style.transform = "translateY(0) scale(1)";
-                                            e.currentTarget.style.boxShadow = isSelected 
+                                            e.currentTarget.style.boxShadow = isSelected
                                                 ? "0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.1) inset"
                                                 : "0 2px 8px rgba(0, 0, 0, 0.2)";
                                             if (!isSelected) {
@@ -346,13 +358,13 @@ function Category() {
                                                 ✓
                                             </div>
                                         )}
-                                        
+
                                         {postCount > 0 && (
                                             <div style={{
                                                 position: "absolute",
                                                 top: "10px",
                                                 left: "10px",
-                                                background: isSelected 
+                                                background: isSelected
                                                     ? "rgba(255, 255, 255, 0.25)"
                                                     : "rgba(102, 126, 234, 0.3)",
                                                 borderRadius: "12px",
@@ -365,8 +377,8 @@ function Category() {
                                                 {postCount}
                                             </div>
                                         )}
-                                        
-                                        <div style={{ 
+
+                                        <div style={{
                                             fontSize: "2.5rem",
                                             marginBottom: "0.75rem",
                                             textAlign: "center",
@@ -404,7 +416,7 @@ function Category() {
                             })}
                         </div>
                     ) : (
-                        <div style={{ 
+                        <div style={{
                             textAlign: "center",
                             padding: "3rem",
                             background: "rgba(51, 65, 85, 0.3)",
@@ -422,8 +434,8 @@ function Category() {
 
             {/* Bouton créer sous-catégorie si aucune sous-catégorie n'existe */}
             {subcategories.length === 0 && (
-                <div style={{ 
-                    textAlign: "center", 
+                <div style={{
+                    textAlign: "center",
                     padding: "3rem",
                     background: "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
                     borderRadius: "12px",
@@ -449,7 +461,7 @@ function Category() {
                 </div>
             )}
 
-            <div style={{ 
+            <div style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
@@ -464,7 +476,7 @@ function Category() {
                         {posts.length} {posts.length > 1 ? "posts" : "post"}
                     </h2>
                     {selectedSubcategory && (
-                        <p style={{ 
+                        <p style={{
                             fontSize: "0.875rem",
                             color: "#94a3b8",
                             margin: 0
@@ -474,7 +486,7 @@ function Category() {
                     )}
                 </div>
                 {user && selectedSubcategory && (
-                    <button 
+                    <button
                         onClick={() => setShowNewPost(true)}
                         style={{
                             padding: "0.875rem 1.5rem",
@@ -535,7 +547,7 @@ function Category() {
                     }}>
                         📂
                     </div>
-                    <h3 style={{ 
+                    <h3 style={{
                         fontSize: "2rem",
                         color: "#f1f5f9",
                         marginBottom: "1rem",
@@ -543,7 +555,7 @@ function Category() {
                     }}>
                         Une catégorie = Un dossier
                     </h3>
-                    <p style={{ 
+                    <p style={{
                         fontSize: "1.2rem",
                         color: "#cbd5e1",
                         marginBottom: "0.75rem",
@@ -561,7 +573,7 @@ function Category() {
                         border: "2px solid rgba(102, 126, 234, 0.3)",
                         marginTop: "1rem"
                     }}>
-                        <p style={{ 
+                        <p style={{
                             fontSize: "1rem",
                             color: "#a5b4fc",
                             margin: 0,
@@ -616,9 +628,19 @@ function Category() {
                     }}>
                         <NewPostForm
                             fixedCategory={category.name}
+                            fixedCategorySlug={category.slug}
+                            fixedSubcategory={selectedSubcategory}
                             subcategories={subcategories}
                             onSuccess={() => {
                                 setShowNewPost(false);
+                                // Trigger reload posts? Logic needs enhancement to auto-reload
+                                // or optimistically add. 
+                                // Since we fetch in useEffect depends on slug, we can trigger re-fetch.
+                                setCategory({ ...category }); // Mock update to trigger effect? No, bad.
+                                // simpler: reload page or use context.
+                                // For now, simple standard reload or just accept it appears on refresh.
+                                // Actually, I should expose loadPosts to refresh.
+                                window.location.reload();
                             }}
                         />
                     </div>
@@ -627,11 +649,14 @@ function Category() {
 
             {showSubcategoryModal && (
                 <SubcategoryModal
-                    categoryId={category.type === 'dynamic' ? category.id : null}
+                    categoryId={category.id}
                     categoryName={category.name}
                     categorySlug={slug}
                     onClose={() => setShowSubcategoryModal(false)}
-                    onSuccess={() => setShowSubcategoryModal(false)}
+                    onSuccess={() => {
+                        setShowSubcategoryModal(false);
+                        window.location.reload(); // Reload to see new subcategory
+                    }}
                 />
             )}
         </div>

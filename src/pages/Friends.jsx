@@ -1,7 +1,7 @@
+// src/pages/Friends.jsx
 import { useState, useEffect } from "react";
-import { collection, query, getDocs, orderBy } from "firebase/firestore";
-import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
+import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import "../styles/Friends.css";
 
@@ -34,14 +34,23 @@ export default function Friends() {
 
   async function loadUsers() {
     try {
-      const q = query(collection(db, "users"), orderBy("fullName", "asc"));
-      const snap = await getDocs(q);
-      const data = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setUsers(data);
-      setFilteredUsers(data);
+      const data = await api.users.getAll();
+      const mapped = data.map(u => {
+        const fullName = u.full_name || u.display_name || "Utilisateur";
+        return {
+          id: u.id,
+          fullName,
+          fullNameLower: fullName.toLowerCase(),
+          email: u.email,
+          licenseYear: u.license_year,
+          photoUrl: u.photo_url || null
+        };
+      });
+      // Sort by fullName
+      mapped.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+      setUsers(mapped);
+      setFilteredUsers(mapped);
     } catch (err) {
       console.error("Erreur lors du chargement des utilisateurs:", err);
     } finally {
@@ -122,9 +131,9 @@ export default function Friends() {
                   {isCurrentUser && (
                     <div className="current-user-badge">Vous</div>
                   )}
-                  
+
                   <div className="user-card-avatar">{initial}</div>
-                  
+
                   <div className="user-card-info">
                     <h3 className="user-card-name">
                       {u.fullName || "Utilisateur"}

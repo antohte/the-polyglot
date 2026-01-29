@@ -1,7 +1,6 @@
 // src/components/SubcategoryModal.jsx
 import { useState } from "react";
-import { doc, updateDoc, arrayUnion, setDoc, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useToast } from "./Toast";
 
@@ -13,9 +12,14 @@ export default function SubcategoryModal({ categoryId, categoryName, categorySlu
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!subcategoryName.trim()) {
             addToast("Veuillez entrer un nom de sous-catégorie", "warning");
+            return;
+        }
+
+        if (!categoryId) {
+            addToast("Impossible d'ajouter une sous-catégorie : catégorie parente non trouvée en base.", "error");
             return;
         }
 
@@ -27,36 +31,13 @@ export default function SubcategoryModal({ categoryId, categoryName, categorySlu
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-+|-+$/g, "");
 
-            const subcategory = {
+            await api.categories.create({
                 name: subcategoryName.trim(),
                 slug,
-                createdBy: user.uid,
-                createdByName: user.displayName || user.email,
-                createdAt: new Date()
-            };
-
-            // Vérifier si un document Firestore existe déjà pour cette catégorie
-            const categoriesRef = collection(db, "categories");
-            const q = query(categoriesRef, where("slug", "==", categorySlug));
-            const snapshot = await getDocs(q);
-
-            if (!snapshot.empty) {
-                // Document existe : ajouter la sous-catégorie
-                const docId = snapshot.docs[0].id;
-                await updateDoc(doc(db, "categories", docId), {
-                    subcategories: arrayUnion(subcategory)
-                });
-            } else {
-                // Document n'existe pas : créer le document avec la sous-catégorie
-                await setDoc(doc(collection(db, "categories")), {
-                    name: categoryName,
-                    slug: categorySlug,
-                    description: "",
-                    subcategories: [subcategory],
-                    createdAt: serverTimestamp(),
-                    createdBy: user.uid
-                });
-            }
+                description: "",
+                parent_id: categoryId,
+                // created_by: user.uid // If column added
+            });
 
             addToast("Sous-catégorie créée avec succès", "success");
             if (onSuccess) onSuccess();

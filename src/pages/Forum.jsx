@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, query, where } from 'firebase/firestore'
-import { db } from '../firebase'
+import { api } from '../api/client'
 import { CATEGORIES } from '../constants/categories'
 import { useAuth } from '../auth/AuthContext'
 import CategoryRequestModal from '../components/CategoryRequestModal'
@@ -13,24 +12,18 @@ export default function Forum() {
     const [showRequestModal, setShowRequestModal] = useState(false)
     const [dynamicCategories, setDynamicCategories] = useState([])
 
-    // Charger les catégories approuvées depuis Firestore
+    // Charger les catégories approuvées depuis MySQL
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, "categories"), (snapshot) => {
-            const cats = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }))
+        api.categories.getAll().then(cats => {
             setDynamicCategories(cats)
-        })
-
-        return () => unsubscribe()
+        }).catch(err => console.error("Error fetching categories:", err));
     }, [])
 
     // Combiner les catégories statiques et dynamiques SANS DOUBLONS
     // Ne garder les catégories dynamiques QUE si leur slug n'existe pas dans les statiques
     const staticSlugs = CATEGORIES.map(c => c.slug);
     const uniqueDynamicCategories = dynamicCategories.filter(c => !staticSlugs.includes(c.slug));
-    
+
     const allCategories = [
         ...CATEGORIES.map(c => ({ ...c, type: 'static' })),
         ...uniqueDynamicCategories.map(c => ({ ...c, type: 'dynamic' }))

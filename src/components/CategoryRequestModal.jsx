@@ -1,7 +1,6 @@
 // src/components/CategoryRequestModal.jsx
 import { useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
 export default function CategoryRequestModal({ onClose }) {
@@ -12,7 +11,7 @@ export default function CategoryRequestModal({ onClose }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!categoryName.trim()) {
             alert("⚠️ Veuillez entrer un nom de catégorie");
             return;
@@ -20,20 +19,10 @@ export default function CategoryRequestModal({ onClose }) {
 
         setSubmitting(true);
         try {
-            const slug = categoryName.toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "");
-
-            await addDoc(collection(db, "categoryRequests"), {
-                name: categoryName.trim(),
-                slug,
-                description: description.trim(),
-                requestedBy: user.uid,
-                requestedByName: user.displayName || user.email,
-                status: "pending", // pending, approved, rejected
-                createdAt: serverTimestamp()
+            await api.categories.request({
+                requested_by: user.uid,
+                category_name: categoryName.trim(),
+                reason: description.trim()
             });
 
             alert("✅ Votre demande a été envoyée ! Un administrateur la vérifiera prochainement.");
@@ -95,7 +84,7 @@ export default function CategoryRequestModal({ onClose }) {
                         marginBottom: "2rem"
                     }}>
                         <p style={{ margin: 0, fontSize: "0.875rem", color: "#93c5fd" }}>
-                            ℹ️ <strong>Note :</strong> Votre demande sera examinée par un administrateur avant d'être approuvée. 
+                            ℹ️ <strong>Note :</strong> Votre demande sera examinée par un administrateur avant d'être approuvée.
                             Vous serez notifié une fois la décision prise.
                         </p>
                     </div>

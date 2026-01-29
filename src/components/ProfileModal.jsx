@@ -1,23 +1,22 @@
 // src/components/ProfileModal.jsx
 import { useEffect, useState } from "react";
-import { doc, setDoc } from "firebase/firestore";
-import { updateProfile } from "firebase/auth";
-import { db } from "../firebase";
+import { api } from "../api/client";
 import "../styles/ProfileModal.css";
 
 const YEARS = ["L1", "L2", "L3", "M1", "M2"];
 
 export default function ProfileModal({ user, initialProfile, open, onClose, onSaved }) {
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName]   = useState("");
-  const [year, setYear]           = useState(YEARS[2]); // L3 par défaut
-  const [busy, setBusy]           = useState(false);
+  const [lastName, setLastName] = useState("");
+  const [year, setYear] = useState(YEARS[2]); // L3 par défaut
+  const [busy, setBusy] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
     if (!open) return;
-    setFirstName(initialProfile?.firstName || "");
-    setLastName(initialProfile?.lastName || "");
+    const names = (initialProfile?.fullName || "").split(" ");
+    setFirstName(names[0] || "");
+    setLastName(names.slice(1).join(" ") || "");
     setYear(initialProfile?.licenseYear || YEARS[2]);
     setSuccessMsg("");
   }, [open, initialProfile]);
@@ -33,18 +32,15 @@ export default function ProfileModal({ user, initialProfile, open, onClose, onSa
     }
     setBusy(true);
     try {
-      const ref = doc(db, "users", user.uid);
       const payload = {
-        uid: user.uid,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        fullName,
-        fullNameLower: fullName.toLowerCase(),
-        licenseYear: year,
-        updatedAt: new Date(),
+        full_name: fullName,
+        display_name: fullName,
+        license_year: year
       };
-      await setDoc(ref, payload, { merge: true });
-      await updateProfile(user, { displayName: fullName }).catch(() => {});
+
+      await api.users.update(user.uid, payload);
+      // await updateProfile(user, { displayName: fullName }).catch(() => { });
+
       setSuccessMsg("Profil mis à jour !");
       setTimeout(() => {
         onSaved?.();
@@ -79,7 +75,7 @@ export default function ProfileModal({ user, initialProfile, open, onClose, onSa
               id="modal-firstname"
               className="ui-input"
               value={firstName}
-              onChange={e=>setFirstName(e.target.value)}
+              onChange={e => setFirstName(e.target.value)}
               placeholder="Votre prénom"
             />
           </div>
@@ -90,7 +86,7 @@ export default function ProfileModal({ user, initialProfile, open, onClose, onSa
               id="modal-lastname"
               className="ui-input"
               value={lastName}
-              onChange={e=>setLastName(e.target.value)}
+              onChange={e => setLastName(e.target.value)}
               placeholder="Votre nom"
             />
           </div>
@@ -101,7 +97,7 @@ export default function ProfileModal({ user, initialProfile, open, onClose, onSa
               id="modal-year"
               className="ui-select"
               value={year}
-              onChange={e=>setYear(e.target.value)}
+              onChange={e => setYear(e.target.value)}
             >
               {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
             </select>

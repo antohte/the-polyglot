@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api/client";
 import "../../styles/Admin.css";
+import AdminModal from "../../components/AdminModal";
 
 export default function AdminUsers() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+
+    // Modal State
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [newUser, setNewUser] = useState({ email: '', password: '', full_name: '' });
+    const [createError, setCreateError] = useState('');
 
     useEffect(() => {
         fetchUsers();
@@ -14,8 +19,7 @@ export default function AdminUsers() {
 
     const fetchUsers = async () => {
         try {
-            const snap = await getDocs(collection(db, "users"));
-            const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+            const data = await api.users.getAll();
             setUsers(data);
         } catch (err) {
             console.error("Error fetching users:", err);
@@ -25,203 +29,252 @@ export default function AdminUsers() {
     };
 
     const toggleBan = async (user) => {
-        if (!window.confirm(`Are you sure you want to ${user.isBanned ? "unban" : "ban"} ${user.email}?`)) return;
+        if (!window.confirm(`Voulez-vous vraiment ${user.is_banned ? "débannir" : "bannir"} ${user.email} ?`)) return;
 
         try {
-            const ref = doc(db, "users", user.id);
-            await updateDoc(ref, { isBanned: !user.isBanned });
+            await api.users.update(user.id, { is_banned: !user.is_banned ? 1 : 0 });
             setUsers((prev) =>
-                prev.map((u) => (u.id === user.id ? { ...u, isBanned: !u.isBanned } : u))
+                prev.map((u) => (u.id === user.id ? { ...u, is_banned: !user.is_banned } : u))
             );
         } catch (err) {
             console.error("Error toggling ban:", err);
-            alert("Failed to update user status");
-        }
-    };
-
-    const toggleAdmin = async (user) => {
-        const isNowAdmin = user.role !== "admin";
-        if (!window.confirm(`Make ${user.email} ${isNowAdmin ? "ADMIN" : "USER"}?`)) return;
-
-        try {
-            const ref = doc(db, "users", user.id);
-            const newRole = isNowAdmin ? "admin" : "user";
-            await updateDoc(ref, { role: newRole });
-            setUsers((prev) =>
-                prev.map((u) => (u.id === user.id ? { ...u, role: newRole } : u))
-            );
-        } catch (err) {
-            console.error("Error changing role:", err);
-            alert("Failed to update role");
+            alert("Erreur lors de la mise à jour du statut.");
         }
     };
 
     const changeRole = async (user, newRole) => {
-        if (!window.confirm(`Changer le rôle de ${user.email} en "${newRole}"?`)) return;
+        // Confirmation is implicit in the UI interaction usually, but let's keep it safe
+        if (!window.confirm(`Changer le rôle de ${user.email} en "${newRole}" ?`)) return;
 
         try {
-            const ref = doc(db, "users", user.id);
-            await updateDoc(ref, { role: newRole });
-            setUsers((prev) =>
-                prev.map((u) => (u.id === user.id ? { ...u, role: newRole } : u))
-            );
+            // Optimistic update
+            setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, role: newRole } : u)));
+            await api.users.update(user.id, { role: newRole });
         } catch (err) {
             console.error("Error changing role:", err);
             alert("Échec de la mise à jour du rôle");
+            fetchUsers(); // Revert on error
         }
     };
 
-    if (loading) return <div className="admin-loading">Chargement des utilisateurs...</div>;
+    const handleCreateUser = async (e) => {
+        e.preventDefault();
+        setCreateError('');
+        try {
+            // We use the existing signup API but ignore the login token
+            await api.auth.signup(newUser);
+            alert("Utilisateur créé avec succès !");
+            setIsCreateOpen(false);
+            setNewUser({ email: '', password: '', full_name: '' });
+            fetchUsers(); // Refresh list
+        } catch (err) {
+            setCreateError(err.message || "Erreur lors de la création");
+        }
+    };
 
-    // Filtrage des utilisateurs
+    if (loading) return <div className="admin-loading">Chargement des données...</div>;
+
+    // Filtering
     const filteredUsers = users.filter(user => {
         if (!searchTerm.trim()) return true;
         const search = searchTerm.toLowerCase();
         return (
             user.email?.toLowerCase().includes(search) ||
-            user.fullName?.toLowerCase().includes(search) ||
-            user.displayName?.toLowerCase().includes(search) ||
+            user.full_name?.toLowerCase().includes(search) ||
+            user.display_name?.toLowerCase().includes(search) ||
             user.role?.toLowerCase().includes(search)
         );
     });
 
     return (
         <div className="admin-page">
-            <h1>Gestion des Utilisateurs</h1>
-            
-            <div className="search-container" style={{
-                marginBottom: "2rem",
-                padding: "1.5rem",
-                background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)",
-                borderRadius: "16px",
-                border: "1px solid rgba(139, 92, 246, 0.2)",
-                backdropFilter: "blur(10px)"
-            }}>
-                <div style={{ position: "relative" }}>
-                    <span style={{
-                        position: "absolute",
-                        left: "1rem",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        fontSize: "1.25rem",
-                        color: "#a78bfa"
-                    }}>🔍</span>
-                    <input
-                        type="text"
-                        className="input-field"
-                        placeholder="Rechercher par nom, email ou rôle..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{
-                            width: "100%",
-                            paddingLeft: "3rem",
-                            background: "rgba(255, 255, 255, 0.05)",
-                            border: "1px solid rgba(139, 92, 246, 0.3)",
-                            borderRadius: "12px",
-                            fontSize: "1rem",
-                            transition: "all 0.3s ease"
-                        }}
-                    />
+            <div className="section-header">
+                <div>
+                    <h1>Gestion des Utilisateurs</h1>
+                    <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>Gérez les membres, leurs rôles et accès.</p>
                 </div>
+                <button className="btn-primary" onClick={() => setIsCreateOpen(true)} style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}>
+                    + Nouvel Utilisateur
+                </button>
+            </div>
+
+            {/* Premium Search Bar */}
+            <div className="content-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ fontSize: "1.5rem" }}>🔍</span>
+                <input
+                    type="text"
+                    placeholder="Rechercher par nom, email, rôle..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "white",
+                        fontSize: "1.1rem",
+                        width: "100%",
+                        outline: "none"
+                    }}
+                />
                 {searchTerm && (
-                    <div style={{
-                        marginTop: "0.75rem",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center"
-                    }}>
-                        <p style={{ color: "#c4b5fd", fontSize: "0.875rem", margin: 0 }}>
-                            ✨ {filteredUsers.length} résultat(s) sur {users.length} utilisateur(s)
-                        </p>
-                        <button
-                            onClick={() => setSearchTerm("")}
-                            style={{
-                                background: "rgba(139, 92, 246, 0.2)",
-                                border: "none",
-                                color: "#c4b5fd",
-                                padding: "0.25rem 0.75rem",
-                                borderRadius: "6px",
-                                fontSize: "0.875rem",
-                                cursor: "pointer",
-                                transition: "all 0.2s ease"
-                            }}
-                        >
-                            ✕ Effacer
-                        </button>
-                    </div>
+                    <button onClick={() => setSearchTerm("")} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                        ✕
+                    </button>
                 )}
             </div>
-            
+
+            {/* Users Table */}
             <div className="admin-table-container">
                 <table className="admin-table">
                     <thead>
                         <tr>
-                            <th>Email / Nom</th>
-                            <th>Role</th>
-                            <th>Status</th>
+                            <th>Utilisateur</th>
+                            <th>Rôle</th>
+                            <th>Statut</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredUsers.length === 0 ? (
                             <tr>
-                                <td colSpan="4" style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>
-                                    {searchTerm ? "❌ Aucun utilisateur ne correspond à votre recherche" : "Aucun utilisateur disponible"}
+                                <td colSpan="4" style={{ textAlign: "center", padding: "3rem", color: "#94a3b8" }}>
+                                    {searchTerm ? "Aucun résultat trouvé pour votre recherche." : "Aucun utilisateur inscrit."}
                                 </td>
                             </tr>
                         ) : (
                             filteredUsers.map((user) => (
-                            <tr key={user.id}>
-                                <td>
-                                    <div style={{ fontWeight: "bold" }}>{user.fullName || user.displayName || "Sans nom"}</div>
-                                    <div style={{ fontSize: "0.85em", color: "#94a3b8" }}>{user.email}</div>
-                                </td>
-                                <td>
-                                    <select 
-                                        value={user.role || 'user'}
-                                        onChange={(e) => changeRole(user, e.target.value)}
-                                        style={{
-                                            background: user.role === 'admin' ? 'rgba(239, 68, 68, 0.2)' : 
-                                                        user.role === 'organizer' ? 'rgba(102, 126, 234, 0.2)' : 
-                                                        'rgba(148, 163, 184, 0.2)',
-                                            color: user.role === 'admin' ? '#fca5a5' : 
-                                                   user.role === 'organizer' ? '#c4b5fd' : 
-                                                   '#cbd5e1',
-                                            border: '1px solid',
-                                            borderColor: user.role === 'admin' ? 'rgba(239, 68, 68, 0.3)' : 
-                                                        user.role === 'organizer' ? 'rgba(102, 126, 234, 0.3)' : 
-                                                        'rgba(148, 163, 184, 0.3)',
-                                            padding: '0.5rem 0.75rem',
-                                            borderRadius: '8px',
-                                            fontWeight: '600',
-                                            fontSize: '0.875rem',
-                                            cursor: 'pointer',
-                                            textTransform: 'uppercase'
-                                        }}
-                                    >
-                                        <option value="user">👤 User</option>
-                                        <option value="organizer">🎯 Organizer</option>
-                                        <option value="admin">👑 Admin</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    {user.isBanned ? (
-                                        <span className="status-badge status-banned">BANNED</span>
-                                    ) : (
-                                        <span className="status-badge" style={{ background: "rgba(34, 197, 94, 0.2)", color: "#86efac" }}>Active</span>
-                                    )}
-                                </td>
-                                <td>
-                                    <button className="admin-btn btn-danger" onClick={() => toggleBan(user)}>
-                                        {user.isBanned ? "Unban" : "Ban"}
-                                    </button>
-                                </td>
-                            </tr>
-                        ))
+                                <tr key={user.id}>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div style={{
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                background: user.photo_url ? `url(${user.photo_url}) center/cover` : 'linear-gradient(135deg, #6366f1, #ec4899)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                color: 'white', fontWeight: 'bold'
+                                            }}>
+                                                {!user.photo_url && (user.full_name?.charAt(0) || user.email.charAt(0)).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: "600", color: '#f1f5f9' }}>{user.full_name || "Sans nom"}</div>
+                                                <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>{user.email}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <select
+                                            value={user.role || 'user'}
+                                            onChange={(e) => changeRole(user, e.target.value)}
+                                            style={{
+                                                background: 'rgba(15, 23, 42, 0.5)',
+                                                color: user.role === 'admin' ? '#fca5a5' : user.role === 'organizer' ? '#c4b5fd' : '#cbd5e1',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                padding: '0.25rem 0.5rem',
+                                                borderRadius: '6px',
+                                                fontWeight: '600',
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <option value="user">User</option>
+                                            <option value="organizer">Organizer</option>
+                                            <option value="admin">Admin</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        {user.is_banned ? (
+                                            <span className="status-badge status-banned">BANNIS</span>
+                                        ) : (
+                                            <span className="status-badge status-success">ACTIF</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <button
+                                            className={`admin-btn ${user.is_banned ? 'btn-success' : 'btn-danger'}`}
+                                            onClick={() => toggleBan(user)}
+                                        >
+                                            {user.is_banned ? "Débannir" : "Bannir"}
+                                        </button>
+                                        <a href={`/user/${user.id}`} target="_blank" rel="noreferrer" className="admin-btn btn-primary" style={{ textDecoration: 'none' }}>
+                                            Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                            ))
                         )}
                     </tbody>
                 </table>
             </div>
+
+            {/* Create User Modal */}
+            <AdminModal
+                isOpen={isCreateOpen}
+                onClose={() => setIsCreateOpen(false)}
+                title="Créer un nouvel utilisateur"
+                actions={
+                    <>
+                        <button onClick={() => setIsCreateOpen(false)} className="back-home-btn" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>Annuler</button>
+                        <button onClick={handleCreateUser} className="btn-primary">Créer l'utilisateur</button>
+                    </>
+                }
+            >
+                <form onSubmit={handleCreateUser} className="settings-grid">
+                    {createError && (
+                        <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', borderRadius: '8px', marginBottom: '1rem' }}>
+                            {createError}
+                        </div>
+                    )}
+                    <label>
+                        Nom Complet
+                        <input
+                            type="text"
+                            className="input-field"
+                            required
+                            value={newUser.full_name}
+                            onChange={e => setNewUser({ ...newUser, full_name: e.target.value })}
+                            style={{
+                                background: 'rgba(15, 23, 42, 0.5)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                color: 'white'
+                            }}
+                        />
+                    </label>
+                    <label>
+                        Email
+                        <input
+                            type="email"
+                            className="input-field"
+                            required
+                            value={newUser.email}
+                            onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                            style={{
+                                background: 'rgba(15, 23, 42, 0.5)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                color: 'white'
+                            }}
+                        />
+                    </label>
+                    <label>
+                        Mot de passe
+                        <input
+                            type="password"
+                            className="input-field"
+                            required
+                            value={newUser.password}
+                            onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                            style={{
+                                background: 'rgba(15, 23, 42, 0.5)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                color: 'white'
+                            }}
+                        />
+                    </label>
+                </form>
+            </AdminModal>
         </div>
     );
 }

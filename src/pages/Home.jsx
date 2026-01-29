@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, limit, orderBy, query, onSnapshot } from 'firebase/firestore'
 import { Link } from 'react-router-dom'
-import { db } from '../firebase'
+import { api } from '../api/client'
 import PostCard from '../components/PostCard'
 import { ChatBubbleIllustration, BookIllustration, PeopleIllustration } from '../components/Illustrations'
 import { EmptyState } from '../components/EmptyState'
@@ -28,17 +27,17 @@ export default function Home() {
 
 
     useEffect(() => {
-        const q1 = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(6))
-        
-        // Listener en temps réel
-        const unsubscribe = onSnapshot(q1, (snap) => {
-            setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-        }, (error) => {
-            console.error("Erreur lors du chargement des posts:", error)
-        })
-
-        // Nettoyer le listener
-        return () => unsubscribe()
+        const loadPosts = async () => {
+            try {
+                const data = await api.posts.getAll()
+                // Sort by desc date just in case
+                // data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                setPosts(data.slice(0, 6))
+            } catch (err) {
+                console.error("Erreur lors du chargement des posts:", err)
+            }
+        }
+        loadPosts()
     }, [])
 
 
