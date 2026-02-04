@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(255),
     photo_url VARCHAR(512),
     role ENUM('user', 'organizer', 'admin') DEFAULT 'user',
+    license_year VARCHAR(50) DEFAULT NULL,
+    department VARCHAR(100) DEFAULT NULL,
+    password_hash VARCHAR(255) DEFAULT NULL,
     is_banned BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -39,6 +42,10 @@ CREATE TABLE IF NOT EXISTS posts (
     title VARCHAR(255) NOT NULL,
     content TEXT, -- Markdown or HTML content
     image_url VARCHAR(512),
+    subcategory VARCHAR(100) DEFAULT NULL,
+    files JSON DEFAULT NULL,
+    language VARCHAR(10) DEFAULT 'fr',
+    post_type VARCHAR(50) DEFAULT 'article',
     is_pinned BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -76,6 +83,7 @@ CREATE TABLE IF NOT EXISTS events (
     event_date DATETIME NOT NULL,
     location VARCHAR(255),
     image_url VARCHAR(512),
+    link VARCHAR(512) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
@@ -151,6 +159,18 @@ CREATE TABLE IF NOT EXISTS category_requests (
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 14. Friends Table
+CREATE TABLE IF NOT EXISTS friends (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    requester_id VARCHAR(128) NOT NULL,
+    addressee_id VARCHAR(128) NOT NULL,
+    status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (addressee_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_friendship (requester_id, addressee_id)
 );
 
 SET FOREIGN_KEY_CHECKS = 1;
