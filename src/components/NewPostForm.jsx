@@ -872,7 +872,7 @@ export default function NewPostForm({ fixedCategory = null, fixedCategorySlug = 
                   disabled={busy}
                   className="btn btn-primary"
                   style={{
-                    background: busy ? "#64748b" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    background: busy ? "#64748b" : "linear-gradient(135deg, var(--color-primary), var(--color-secondary))",
                     border: "none",
                     borderRadius: "12px",
                     padding: "1rem 3rem",

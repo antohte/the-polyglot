@@ -1,13 +1,16 @@
 // src/components/Header.jsx
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { useSettings } from "../contexts/SettingsContext";
 import useUserProfile from "../hooks/useUserProfile";
 import { useEffect, useState } from "react";
 import ProfileModal from "./ProfileModal";
+import logoPolyglot from "../assets/logo_polyglot.jpg";
 import "../styles/Header.css";
 
 export default function Header() {
   const { user, logout } = useAuth();
+  const { settings } = useSettings();
   const { profile, loading } = useUserProfile(user?.uid);
   const [openProfile, setOpenProfile] = useState(false);
   const loc = useLocation();
@@ -68,7 +71,9 @@ export default function Header() {
         )}
       </div>
 
-      <div className="logo big">THE<br />Polyglot</div>
+      <Link to="/" className="logo big">
+        <img src={settings?.logo_url || logoPolyglot} alt="The Polyglot" style={{ height: '80px', width: 'auto' }} />
+      </Link>
 
       <nav className="nav-under-logo">
         <Link className={navClass("/")} to="/">

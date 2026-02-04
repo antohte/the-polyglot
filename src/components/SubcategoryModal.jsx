@@ -25,18 +25,11 @@ export default function SubcategoryModal({ categoryId, categoryName, categorySlu
 
         setSubmitting(true);
         try {
-            const slug = subcategoryName.toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "");
-
-            await api.categories.create({
+            await api.subcategories.create({
+                category_id: categoryId,
                 name: subcategoryName.trim(),
-                slug,
                 description: "",
-                parent_id: categoryId,
-                // created_by: user.uid // If column added
+                created_by: user.uid
             });
 
             addToast("Sous-catégorie créée avec succès", "success");
@@ -61,13 +54,13 @@ export default function SubcategoryModal({ categoryId, categoryName, categorySlu
 
                 <form onSubmit={handleSubmit} style={{ padding: "2rem" }}>
                     <div style={{
-                        background: "rgba(139, 92, 246, 0.1)",
-                        border: "2px solid rgba(139, 92, 246, 0.3)",
+                        background: "var(--color-bg-secondary)",
+                        border: "2px solid rgba(255, 255, 255, 0.1)",
                         borderRadius: "8px",
                         padding: "1rem",
                         marginBottom: "1.5rem"
                     }}>
-                        <p style={{ margin: 0, fontSize: "0.875rem", color: "#c4b5fd" }}>
+                        <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
                             <strong>Catégorie parent :</strong> {categoryName}
                         </p>
                     </div>
@@ -115,7 +108,7 @@ export default function SubcategoryModal({ categoryId, categoryName, categorySlu
                             className="btn btn-primary"
                             disabled={submitting}
                             style={{
-                                background: submitting ? "#64748b" : "linear-gradient(135deg, #667eea, #764ba2)",
+                                background: submitting ? "#64748b" : "linear-gradient(135deg, var(--color-primary), var(--color-secondary))",
                                 opacity: submitting ? 0.6 : 1
                             }}
                         >

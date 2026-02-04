@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext'
 import { ToastProvider } from './components/Toast'
+import { SettingsProvider } from './contexts/SettingsContext'
 import Home from './pages/Home.jsx'
 import Forum from './pages/Forum.jsx'
 import Header from './components/Header.jsx'
@@ -36,10 +37,11 @@ export default function App() {
   }
 
   return (
-    <ToastProvider>
-      <div className="app">
-        {!isAdminRoute && <Header />}
-        <Routes>
+    <SettingsProvider>
+      <ToastProvider>
+        <div className="app">
+          {!isAdminRoute && <Header />}
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/" element={<Home />} />
@@ -65,6 +67,7 @@ export default function App() {
           </Route>
         </Routes>
       </div>
-    </ToastProvider>
+      </ToastProvider>
+    </SettingsProvider>
   )
 }

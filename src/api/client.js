@@ -126,6 +126,22 @@ export const api = {
         delete: (id) => fetch(`${API_URL}/categories/${id}`, { method: 'DELETE', headers: getHeaders() }).then(handleResponse),
     },
 
+    // Subcategories
+    subcategories: {
+        getByCategory: (categoryId) => fetch(`${API_URL}/subcategories/category/${categoryId}`, { headers: getHeaders() }).then(handleResponse),
+        create: (data) => fetch(`${API_URL}/subcategories`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        }).then(handleResponse),
+        update: (id, data) => fetch(`${API_URL}/subcategories/${id}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        }).then(handleResponse),
+        delete: (id) => fetch(`${API_URL}/subcategories/${id}`, { method: 'DELETE', headers: getHeaders() }).then(handleResponse),
+    },
+
     // Events
     events: {
         getAll: () => fetch(`${API_URL}/events`, { headers: getHeaders() }).then(handleResponse),
@@ -175,6 +191,16 @@ export const api = {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify({ action })
+        }).then(handleResponse),
+    },
+
+    // Settings
+    settings: {
+        getAll: () => fetch(`${API_URL}/settings`, { headers: getHeaders() }).then(handleResponse),
+        update: (data) => fetch(`${API_URL}/settings`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
         }).then(handleResponse),
     }
 };

@@ -199,6 +199,34 @@
   text-decoration: underline;
 }
 
+.toggle-text {
+  text-align: center;
+  margin-top: var(--space-lg);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color var(--transition-fast);
+  padding: 0;
+  font-size: inherit;
+}
+
+.toggle-btn:hover {
+  color: var(--color-secondary);
+}
+
+.toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ============================================
    ERROR MESSAGE
    ============================================ */

@@ -23,6 +23,23 @@ async function initDb() {
         // Use Database
         await connection.query(`USE ${process.env.DB_NAME || 'the_polyglot'}`);
 
+        // Drop and recreate tables to ensure schema is up to date
+        console.log('Dropping existing tables...');
+        await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+        
+        const [tables] = await connection.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = '${process.env.DB_NAME || 'the_polyglot'}'
+        `);
+        
+        for (const { table_name } of tables) {
+            await connection.query(`DROP TABLE IF EXISTS ${table_name}`);
+            console.log(`  ✓ Dropped table: ${table_name}`);
+        }
+        
+        await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+
         // Read Schema
         const schemaPath = path.join(__dirname, '../../database/schema.sql');
         const schemaSql = fs.readFileSync(schemaPath, 'utf8');

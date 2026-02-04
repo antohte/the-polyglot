@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useSettings } from "../contexts/SettingsContext";
 import useUserProfile from "../hooks/useUserProfile";
 import EventCard from "../components/EventCard";
 import NewEventForm from "../components/NewEventForm";
@@ -9,6 +10,7 @@ import "../styles/Events.css";
 
 export default function Events() {
     const { user } = useAuth();
+    const { settings } = useSettings();
     const { profile } = useUserProfile(user?.uid);
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -56,13 +58,9 @@ export default function Events() {
         <div className="container">
             {/* Hero Section - Department Description */}
             <div className="events-hero">
-                <h1>📅 Pôle Événementiel</h1>
+                <h1>{settings?.events_title || '📅 Pôle Événementiel'}</h1>
                 <p>
-                    Bienvenue au Pôle Événementiel de The Polyglot ! Découvrez nos événements
-                    culturels, linguistiques et académiques. Participez à des conférences,
-                    ateliers, soirées culturelles et bien plus encore. Chaque événement est
-                    une opportunité unique de pratiquer les langues, rencontrer d'autres
-                    étudiants passionnés et enrichir votre expérience internationale.
+                    {settings?.events_description || 'Bienvenue au Pôle Événementiel de The Polyglot ! Découvrez nos événements culturels, linguistiques et académiques.'}
                 </p>
             </div>
 
@@ -70,7 +68,7 @@ export default function Events() {
             <div className="events-grid">
                 {events.length === 0 ? (
                     <div className="card">
-                        <p style={{ color: "var(--muted)" }}>
+                        <p style={{ color: "var(--color-text-secondary)" }}>
                             Aucun événement à venir pour le moment. Revenez bientôt !
                         </p>
                     </div>
@@ -84,7 +82,7 @@ export default function Events() {
             {/* FAB for creating events (admin and organizers only) */}
             {user && isOrganizer && (
                 <button
-                    className="fab"
+                    className="fab btn-primary"
                     onClick={() => setShowNewEvent(true)}
                     title="Créer un événement"
                 >

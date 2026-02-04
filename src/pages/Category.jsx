@@ -28,7 +28,7 @@ function Category() {
         async function loadCategory() {
             setCategoryLoading(true);
             try {
-                // Fetch all categories (flat list)
+                // Fetch all categories from DB
                 const allCats = await api.categories.getAll();
 
                 // Find current category
@@ -36,32 +36,22 @@ function Category() {
                 const staticCategory = CATEGORIES.find((cat) => cat.slug === slug);
 
                 if (foundCat) {
-                    // Find children (subcategories)
-                    const children = allCats.filter(c => c.parent_id === foundCat.id);
-
-                    // Merge with static subcategories if any (avoid dupes by name/slug?)
-                    // Assuming API is source of truth, but if static has extra...
-                    // For now, let's rely on API children + static children if needed.
-                    // But if migrated, API children should cover it.
+                    // Fetch subcategories from the subcategories table
+                    const subcategories = await api.subcategories.getByCategory(foundCat.id);
 
                     // Construct category object
                     const catObj = {
                         ...foundCat,
                         type: staticCategory ? 'static' : 'dynamic',
-                        subcategories: children.map(child => ({
-                            name: child.name,
-                            slug: child.slug,
-                            createdByName: child.created_by_name || "Admin", // If joined
-                            description: child.description
+                        subcategories: subcategories.map(sub => ({
+                            id: sub.id,
+                            name: sub.name,
+                            slug: sub.slug,
+                            createdByName: sub.creator_name || "Admin",
+                            description: sub.description
                         })),
                         icon: staticCategory?.icon || "📁"
                     };
-
-                    // If no DB children found, but static has some? 
-                    // Migration should have handled it. If not, fallback to static.
-                    if (children.length === 0 && staticCategory?.subcategories) {
-                        catObj.subcategories = staticCategory.subcategories;
-                    }
 
                     if (mounted) {
                         setCategory(catObj);
@@ -73,6 +63,7 @@ function Category() {
                     }
                 } else if (staticCategory) {
                     // Only static exists (no DB record yet?)
+                    // Try to find its ID anyway or handle differently
                     if (mounted) {
                         setCategory({
                             ...staticCategory,
@@ -194,9 +185,7 @@ function Category() {
                         <h3 style={{
                             fontSize: "1.5rem",
                             fontWeight: "700",
-                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
+                            color: "var(--color-text-primary)",
                             margin: 0
                         }}>
                             📁 Sous-catégories
@@ -309,35 +298,23 @@ function Category() {
                                             padding: "1.5rem",
                                             borderRadius: "16px",
                                             background: isSelected
-                                                ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                                                : "linear-gradient(135deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.6) 100%)",
+                                                ? "linear-gradient(135deg, var(--color-primary), var(--color-secondary))"
+                                                : "var(--color-bg-secondary)",
                                             border: "2px solid",
-                                            borderColor: isSelected ? "transparent" : "#334155",
+                                            borderColor: isSelected ? "transparent" : "rgba(255, 255, 255, 0.1)",
                                             cursor: "pointer",
                                             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                                             position: "relative",
                                             overflow: "hidden",
-                                            boxShadow: isSelected
-                                                ? "0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.1) inset"
-                                                : "0 2px 8px rgba(0, 0, 0, 0.2)"
+                                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)"
                                         }}
                                         onMouseEnter={(e) => {
                                             e.currentTarget.style.transform = "translateY(-4px) scale(1.02)";
-                                            e.currentTarget.style.boxShadow = isSelected
-                                                ? "0 12px 32px rgba(102, 126, 234, 0.5), 0 0 0 1px rgba(102, 126, 234, 0.2) inset"
-                                                : "0 8px 24px rgba(102, 126, 234, 0.3)";
-                                            if (!isSelected) {
-                                                e.currentTarget.style.borderColor = "#667eea";
-                                            }
+                                            e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.3)";
                                         }}
                                         onMouseLeave={(e) => {
                                             e.currentTarget.style.transform = "translateY(0) scale(1)";
-                                            e.currentTarget.style.boxShadow = isSelected
-                                                ? "0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.1) inset"
-                                                : "0 2px 8px rgba(0, 0, 0, 0.2)";
-                                            if (!isSelected) {
-                                                e.currentTarget.style.borderColor = "#334155";
-                                            }
+                                            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
                                         }}
                                     >
                                         {isSelected && (
@@ -364,9 +341,7 @@ function Category() {
                                                 position: "absolute",
                                                 top: "10px",
                                                 left: "10px",
-                                                background: isSelected
-                                                    ? "rgba(255, 255, 255, 0.25)"
-                                                    : "rgba(102, 126, 234, 0.3)",
+                                                background: "rgba(255, 255, 255, 0.25)",
                                                 borderRadius: "12px",
                                                 padding: "0.25rem 0.5rem",
                                                 fontSize: "0.75rem",
@@ -390,7 +365,7 @@ function Category() {
                                             fontSize: "1rem",
                                             fontWeight: "700",
                                             textAlign: "center",
-                                            color: "#ffffff",
+                                            color: isSelected ? "#ffffff" : "var(--color-text-secondary)",
                                             marginBottom: "0.5rem",
                                             wordBreak: "break-word",
                                             lineHeight: "1.3"
@@ -400,7 +375,7 @@ function Category() {
                                         <div style={{
                                             fontSize: "0.75rem",
                                             textAlign: "center",
-                                            color: isSelected ? "rgba(255, 255, 255, 0.85)" : "#94a3b8",
+                                            color: isSelected ? "rgba(255, 255, 255, 0.85)" : "var(--color-text-secondary)",
                                             display: "flex",
                                             alignItems: "center",
                                             justifyContent: "center",
@@ -488,28 +463,15 @@ function Category() {
                 {user && selectedSubcategory && (
                     <button
                         onClick={() => setShowNewPost(true)}
+                        className="btn btn-primary"
                         style={{
                             padding: "0.875rem 1.5rem",
                             fontSize: "1rem",
                             fontWeight: "600",
                             borderRadius: "10px",
-                            border: "none",
-                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            color: "#ffffff",
-                            cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
-                            gap: "0.5rem",
-                            transition: "all 0.3s ease",
-                            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)"
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.transform = "translateY(-2px)";
-                            e.target.style.boxShadow = "0 6px 16px rgba(102, 126, 234, 0.4)";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.transform = "translateY(0)";
-                            e.target.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.3)";
+                            gap: "0.5rem"
                         }}
                     >
                         <span style={{ fontSize: "1.2rem" }}>✍️</span>

@@ -375,7 +375,7 @@ export default function Profile() {
             width: '120px',
             height: '120px',
             borderRadius: '50%',
-            background: photoPreview || profilePhoto ? `url(${photoPreview || profilePhoto}) center/cover` : 'linear-gradient(135deg, #6366f1, #a855f7)',
+            background: photoPreview || profilePhoto ? `url(${photoPreview || profilePhoto}) center/cover` : 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

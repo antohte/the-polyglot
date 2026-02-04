@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import logoPolyglot from '../assets/logo_polyglot.jpg'
 import '../styles/Login.css'
 
 export default function Login() {
@@ -65,7 +66,7 @@ export default function Login() {
     <div className="login-container">
       <div className="login-box">
         <div className="login-header">
-          <h1 className="logo-login">THE<br />Polyglot</h1>
+          <img src={logoPolyglot} alt="The Polyglot" style={{ height: '120px', width: 'auto' }} />
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

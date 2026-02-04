@@ -103,7 +103,7 @@ export default function CategoryRequestModal({ onClose }) {
                             className="btn btn-primary"
                             disabled={submitting}
                             style={{
-                                background: submitting ? "#64748b" : "linear-gradient(135deg, #667eea, #764ba2)",
+                                background: submitting ? "#64748b" : "linear-gradient(135deg, var(--color-primary), var(--color-secondary))",
                                 opacity: submitting ? 0.6 : 1
                             }}
                         >

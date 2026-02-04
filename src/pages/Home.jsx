@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
+import { useSettings } from '../contexts/SettingsContext'
 import PostCard from '../components/PostCard'
 import { ChatBubbleIllustration, BookIllustration, PeopleIllustration } from '../components/Illustrations'
 import { EmptyState } from '../components/EmptyState'
@@ -16,6 +17,7 @@ const promoImages = [
 
 
 export default function Home() {
+    const { settings } = useSettings()
     const [posts, setPosts] = useState([])
     const [i, setI] = useState(0)
 
@@ -46,8 +48,8 @@ export default function Home() {
             <section className="hero">
                 <div className="carousel" style={{ backgroundImage: `url(${promoImages[i]})` }} />
                 <div className="hero-text">
-                    <h1>Le Forum — Licence</h1>
-                    <p>Posts, actus, projets. Un espace pour la promo.</p>
+                    <h1>{settings?.home_hero_title || 'Le Forum — Licence'}</h1>
+                    <p>{settings?.home_hero_subtitle || 'Posts, actus, projets. Un espace pour la promo.'}</p>
                     <Link to="/forum" className="btn btn-cta">
                         Accéder au Forum →
                     </Link>
@@ -56,7 +58,7 @@ export default function Home() {
 
             <div className="container">
                 <section className="features">
-                    <h2>Bienvenue sur The Polyglot</h2>
+                    <h2>{settings?.home_welcome_title || 'Bienvenue sur The Polyglot'}</h2>
                     <div className="features-grid">
                         <div className="feature-card">
                             <div className="illustration-container">
