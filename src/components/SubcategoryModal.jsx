@@ -76,6 +76,7 @@ export default function SubcategoryModal({ categoryId, categoryName, categorySlu
                             maxLength={50}
                             required
                             autoFocus
+                            style={{ color: "#000", background: "#fff", border: "1px solid #cbd5e1" }}
                         />
                         <small style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
                             Maximum 50 caractères

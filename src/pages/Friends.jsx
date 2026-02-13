@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import LoginRequiredModal from "../components/LoginRequiredModal";
 import "../styles/Friends.css";
 
 export default function Friends() {
@@ -62,14 +63,9 @@ export default function Friends() {
     navigate(`/user/${userId}`);
   }
 
+  // Don't convert to function body if not needed, just return here
   if (!user) {
-    return (
-      <div className="container">
-        <div className="alert-box">
-          Vous devez être connecté pour voir les membres.
-        </div>
-      </div>
-    );
+    return <LoginRequiredModal />;
   }
 
   return (

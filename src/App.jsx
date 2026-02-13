@@ -1,4 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
+import './styles.css'
 import { useAuth } from './auth/AuthContext'
 import { ToastProvider } from './components/Toast'
 import { SettingsProvider } from './contexts/SettingsContext'
@@ -42,31 +43,31 @@ export default function App() {
         <div className="app">
           {!isAdminRoute && <Header />}
           <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/" element={<Home />} />
-          <Route path="/forum" element={<Forum />} />
-          <Route path="/forum/:slug" element={<Category />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/friends" element={<Friends />} />
-          <Route path="/user/:userId" element={<UserProfile />} />
-          <Route path="/post/:postId" element={<PostDetail />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/forum" element={<Forum />} />
+            <Route path="/forum/:slug" element={<Category />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/friends" element={<Friends />} />
+            <Route path="/user/:userId" element={<UserProfile />} />
+            <Route path="/post/:postId" element={<PostDetail />} />
 
-          {/* Admin Routes */}
-          <Route element={<AdminRoute />}>
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="posts" element={<AdminPosts />} />
-              <Route path="events" element={<AdminEvents />} />
-              <Route path="polls" element={<AdminPolls />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="moderation" element={<AdminModeration />} />
-              <Route path="categories" element={<AdminCategories />} />
+            {/* Admin Routes */}
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="posts" element={<AdminPosts />} />
+                <Route path="events" element={<AdminEvents />} />
+                <Route path="polls" element={<AdminPolls />} />
+                <Route path="settings" element={<AdminSettings />} />
+                <Route path="moderation" element={<AdminModeration />} />
+                <Route path="categories" element={<AdminCategories />} />
+              </Route>
             </Route>
-          </Route>
-        </Routes>
-      </div>
+          </Routes>
+        </div>
       </ToastProvider>
     </SettingsProvider>
   )

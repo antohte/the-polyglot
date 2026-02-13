@@ -2,8 +2,11 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+const { verifyToken, verifyModeratorOrAdmin } = require('../middleware/auth');
+
 // Get all posts (with filtering)
 router.get('/', async (req, res) => {
+    // ... existing ...
     try {
         const { category, subcategory } = req.query;
         let query = `
@@ -38,6 +41,7 @@ router.get('/', async (req, res) => {
 
 // Get single post
 router.get('/:id', async (req, res) => {
+    // ... existing ...
     try {
         const query = `
             SELECT p.*, u.display_name as author_name, u.photo_url as author_photo
@@ -53,8 +57,8 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create post
-router.post('/', async (req, res) => {
+// Create post - Authenticated users only
+router.post('/', verifyToken, async (req, res) => {
     const { id, author_id, category_slug, subcategory, title, content, image_url, files, language, postType } = req.body;
     try {
         await db.query(`
@@ -62,7 +66,7 @@ router.post('/', async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             id,
-            author_id,
+            req.user.uid, // Use authenticated user ID security
             category_slug,
             subcategory,
             title,
@@ -80,10 +84,19 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update post
-router.put('/:id', async (req, res) => {
+// Update post - Moderator or Owner
+router.put('/:id', verifyToken, async (req, res) => {
     const { title, content, image_url, category_slug, subcategory, is_pinned, files, language, postType } = req.body;
+
     try {
+        // Check ownership if not mod/admin
+        if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
+            const [post] = await db.query('SELECT author_id FROM posts WHERE id = ?', [req.params.id]);
+            if (post.length > 0 && post[0].author_id !== req.user.uid) {
+                return res.status(403).json({ error: 'Not authorized' });
+            }
+        }
+
         await db.query(`
             UPDATE posts 
             SET title = ?, content = ?, image_url = ?, category_slug = ?, subcategory = ?, is_pinned = ?, files = ?, language = ?, post_type = ?
@@ -108,9 +121,17 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete post
-router.delete('/:id', async (req, res) => {
+// Delete post - Moderator or Admin or Owner
+router.delete('/:id', verifyToken, async (req, res) => {
     try {
+        // Check permissions
+        if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
+            const [post] = await db.query('SELECT author_id FROM posts WHERE id = ?', [req.params.id]);
+            if (post.length > 0 && post[0].author_id !== req.user.uid) {
+                return res.status(403).json({ error: 'Not authorized' });
+            }
+        }
+
         await db.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
         res.json({ message: 'Post deleted' });
     } catch (err) {

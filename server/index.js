@@ -29,6 +29,8 @@ app.use(express.json());
 
 // Static Uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve React Frontend
+app.use(express.static(path.join(__dirname, 'client_build')));
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -45,8 +47,13 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
 
 // Health check
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
     res.send('API is running...');
+});
+
+// React SPA catch-all (must be last)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client_build', 'index.html'));
 });
 
 app.listen(PORT, () => {

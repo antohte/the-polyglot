@@ -119,81 +119,60 @@ export default function PostDetail() {
         ← Retour
       </button>
 
-      <article className="post-detail">
-        <div className="post-detail-header">
-          <div className="post-meta">
-            <span className="post-author">{post.author_name || "Anonyme"}</span>
-            <span className="dot">•</span>
-            <span className="post-category-badge">{post.category_slug || "Général"}</span>
-            <span className="dot">•</span>
-            <span className="post-date">
-              {new Date(post.created_at).toLocaleDateString('fr-FR')}
-            </span>
+      <article className="post-detail-card glass-panel">
+        <div className="post-header-section">
+          <div className="post-meta-top">
+            <div className="post-author-lockup">
+              <div className="author-avatar-large">
+                {post.author_name ? post.author_name[0].toUpperCase() : "A"}
+              </div>
+              <div className="author-details">
+                <span className="author-name-large">{post.author_name || "Anonyme"}</span>
+                <span className="post-date-large">{new Date(post.created_at).toLocaleDateString('fr-FR')}</span>
+              </div>
+            </div>
+
+            <div className="header-actions">
+              <span className="post-category-tag">{post.category_slug || "Général"}</span>
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="btn-icon-ghost"
+                title="Signaler ce post"
+              >
+                ⋮
+              </button>
+            </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <h1 className="post-detail-title">{post.title}</h1>
-            <button
-              onClick={() => setShowReportModal(true)}
-              style={{
-                background: "rgba(255, 255, 255, 0.05)",
-                border: "none",
-                color: "#94a3b8",
-                fontSize: "1.25rem",
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "all 0.2s",
-                flexShrink: 0,
-                marginLeft: "1rem"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"}
-              title="Signaler ce post"
-            >
-              ⋮
-            </button>
-          </div>
+
+          <h1 className="post-title-large">{post.title}</h1>
         </div>
 
         {post.image_url && (
-          <div className="post-detail-media">
+          <div className="post-media-container">
             <img src={post.image_url} alt={post.title} />
           </div>
         )}
 
-        {/* Video support placeholder if type was stored */}
-        {/* {post.mediaType === 'video' && ... } */}
-
-        <div className="post-detail-content">
+        <div className="post-content-body">
           <p>{post.content}</p>
         </div>
 
-        {/* Affichage des fichiers multiples - Disabled per MySQL Schema constraints */}
-        {/*
-        {post.files && post.files.length > 0 && (
-          <div style={{ ... }}>
-             ... 
-          </div>
-        )}
-        */}
-
-        <div className="post-detail-actions">
+        <div className="post-actions-bar">
           <button
-            className={`action-btn ${liked ? 'active' : ''}`}
+            className={`action-pill ${liked ? 'liked' : ''}`}
             onClick={handleLike}
           >
-            👍 {likeCount} Like{likeCount !== 1 ? 's' : ''}
+            {liked ? '❤️' : '🤍'} <span>{likeCount} J'aime</span>
           </button>
-          <button className="action-btn">
-            💬 {comments.length} Commentaire{comments.length !== 1 ? 's' : ''}
+
+          <button className="action-pill static">
+            💬 <span>{comments.length} Commentaires</span>
           </button>
         </div>
 
-        <div className="comments-section">
+        <div className="card-divider"></div>
+
+        <section className="internal-comments-section">
           <h2>Commentaires ({comments.length})</h2>
 
           {user && (
@@ -206,11 +185,11 @@ export default function PostDetail() {
                 className="ui-input"
               />
               <button
-                className="btn"
+                className="btn-primary-gradient"
                 type="submit"
                 disabled={submitting || !commentText.trim()}
               >
-                {submitting ? 'Envoi...' : 'Commenter'}
+                {submitting ? 'Envoi...' : 'Publier'}
               </button>
             </form>
           )}
@@ -218,7 +197,7 @@ export default function PostDetail() {
           {!user && (
             <div className="login-prompt">
               <p>Connectez-vous pour commenter</p>
-              <Link to="/login" className="btn">Se connecter</Link>
+              <Link to="/login" className="btn-primary-gradient">Se connecter</Link>
             </div>
           )}
 
@@ -239,9 +218,8 @@ export default function PostDetail() {
               ))
             )}
           </div>
-        </div>
+        </section>
       </article>
-
       {showReportModal && (
         <ReportModal
           postId={post.id}

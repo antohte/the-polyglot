@@ -161,21 +161,27 @@
     position: fixed;
     bottom: var(--space-2xl);
     right: var(--space-2xl);
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
+    /* Removed fixed width/height to fit text */
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--radius-full);
     background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
     color: white;
     border: none;
-    font-size: var(--font-size-2xl);
+    font-size: var(--font-size-lg);
+    /* Reduced from 2xl for better proportion */
+    font-weight: var(--font-weight-semibold);
     cursor: pointer;
     box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
     transition: all var(--transition-base);
     z-index: var(--z-fixed);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
 }
 
 .create-event-btn:hover {
-    transform: scale(1.1) rotate(90deg);
+    transform: translateY(-4px);
+    /* Changed from rotate/scale to lift */
     box-shadow: 0 12px 32px rgba(99, 102, 241, 0.5);
 }
 
@@ -225,9 +231,8 @@
     .create-event-btn {
         bottom: var(--space-lg);
         right: var(--space-lg);
-        width: 50px;
-        height: 50px;
-        font-size: var(--font-size-xl);
+        font-size: var(--font-size-base);
+        padding: var(--space-md) var(--space-lg);
     }
 }
 

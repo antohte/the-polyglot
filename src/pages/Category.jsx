@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { CATEGORIES } from "../constants/categories";
 import PostCard from "../components/PostCard";
 import NewPostForm from "../components/NewPostForm";
 import { useAuth } from "../auth/AuthContext";
@@ -33,16 +32,14 @@ function Category() {
 
                 // Find current category
                 const foundCat = allCats.find(c => c.slug === slug);
-                const staticCategory = CATEGORIES.find((cat) => cat.slug === slug);
-
                 if (foundCat) {
-                    // Fetch subcategories from the subcategories table
+                    // Fetch subcategories
                     const subcategories = await api.subcategories.getByCategory(foundCat.id);
 
                     // Construct category object
                     const catObj = {
                         ...foundCat,
-                        type: staticCategory ? 'static' : 'dynamic',
+                        type: 'dynamic',
                         subcategories: subcategories.map(sub => ({
                             id: sub.id,
                             name: sub.name,
@@ -50,28 +47,13 @@ function Category() {
                             createdByName: sub.creator_name || "Admin",
                             description: sub.description
                         })),
-                        icon: staticCategory?.icon || "📁"
+                        icon: "📁"
                     };
 
                     if (mounted) {
                         setCategory(catObj);
                         if (catObj.subcategories.length > 0) {
                             setSelectedSubcategory(catObj.subcategories[0].name);
-                        } else {
-                            setSelectedSubcategory("");
-                        }
-                    }
-                } else if (staticCategory) {
-                    // Only static exists (no DB record yet?)
-                    // Try to find its ID anyway or handle differently
-                    if (mounted) {
-                        setCategory({
-                            ...staticCategory,
-                            type: 'static',
-                            subcategories: staticCategory.subcategories || []
-                        });
-                        if (staticCategory.subcategories?.length > 0) {
-                            setSelectedSubcategory(staticCategory.subcategories[0].name);
                         } else {
                             setSelectedSubcategory("");
                         }

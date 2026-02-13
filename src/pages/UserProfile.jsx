@@ -176,27 +176,27 @@ export default function UserProfile() {
             {!isOwnProfile && (
               <div className="friend-actions" style={{ marginTop: '1rem' }}>
                 {friendStatus === 'none' && (
-                  <button className="btn-primary" onClick={() => handleFriendAction('add')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px' }}>
+                  <button className="btn btn-primary" onClick={() => handleFriendAction('add')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px' }}>
                     ➕ Ajouter en ami
                   </button>
                 )}
                 {friendStatus === 'pending_sent' && (
-                  <button className="btn-ghost" onClick={() => handleFriendAction('cancel')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px', background: '#e2e8f0' }}>
+                  <button className="btn btn-ghost" onClick={() => handleFriendAction('cancel')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px', background: '#e2e8f0' }}>
                     ⏳ Demande envoyée (Annuler)
                   </button>
                 )}
                 {friendStatus === 'pending_received' && (
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn-primary" onClick={() => handleFriendAction('accept')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px' }}>
+                    <button className="btn btn-primary" onClick={() => handleFriendAction('accept')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px' }}>
                       ✅ Accepter
                     </button>
-                    <button className="btn-ghost" onClick={() => handleFriendAction('remove')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px', color: 'red' }}>
+                    <button className="btn btn-ghost" onClick={() => handleFriendAction('remove')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px', color: 'red' }}>
                       ❌ Refuser
                     </button>
                   </div>
                 )}
                 {friendStatus === 'accepted' && (
-                  <button className="btn-ghost" onClick={() => handleFriendAction('remove')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px', color: 'red', border: '1px solid currentColor' }}>
+                  <button className="btn btn-ghost" onClick={() => handleFriendAction('remove')} disabled={actionLoading} style={{ padding: '0.5rem 1rem', borderRadius: '6px', color: 'red', border: '1px solid currentColor' }}>
                     ❌ Retirer des amis
                   </button>
                 )}

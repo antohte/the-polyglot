@@ -1,0 +1,172 @@
+/* PostCard.css - Premium Glassmorphism Design */
+
+.postcard {
+    display: flex;
+    flex-direction: column;
+    background: rgba(30, 41, 59, 0.7);
+    /* Darker, less transparent */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.postcard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+    border-color: rgba(99, 102, 241, 0.3);
+    background: rgba(30, 41, 59, 0.85);
+}
+
+.postcard-link-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    cursor: pointer;
+}
+
+/* Header & Meta */
+.postcard-header {
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 20;
+    /* Above overlay for interactions if needed, though overlay covers all usually. */
+    pointer-events: none;
+    /* Let clicks pass to overlay */
+}
+
+.postcard-meta-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.postcard-author-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.postcard-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.postcard-author-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.postcard-author-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #f1f5f9;
+}
+
+.postcard-date {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.postcard-category-pill {
+    background: rgba(99, 102, 241, 0.15);
+    color: #c7d2fe;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    text-transform: capitalize;
+}
+
+.postcard-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    line-height: 1.4;
+    transition: color 0.2s;
+}
+
+.postcard:hover .postcard-title {
+    color: #818cf8;
+    /* Light indigo on hover */
+}
+
+/* Content */
+.postcard-content {
+    font-size: 0.95rem;
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    /* Limit lines */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    position: relative;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Media */
+.postcard-media {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Actions */
+.postcard-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: auto;
+    /* Push to bottom */
+    position: relative;
+    z-index: 20;
+    /* Above overlay */
+}
+
+.postcard-actions .btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.postcard-actions .btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.postcard-actions .btn.active {
+    color: #818cf8;
+    border-color: rgba(99, 102, 241, 0.3);
+    background: rgba(99, 102, 241, 0.1);
+}

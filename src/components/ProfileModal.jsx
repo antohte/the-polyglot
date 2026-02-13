@@ -1,4 +1,4 @@
-// src/components/ProfileModal.jsx
+import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import "../styles/ProfileModal.css";
@@ -53,7 +53,7 @@ export default function ProfileModal({ user, initialProfile, open, onClose, onSa
     }
   }
 
-  return (
+  return createPortal(
     <>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-panel modal-profile" role="dialog" aria-modal="true">
@@ -113,6 +113,7 @@ export default function ProfileModal({ user, initialProfile, open, onClose, onSa
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

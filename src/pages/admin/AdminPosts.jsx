@@ -183,7 +183,7 @@ export default function AdminPosts() {
                 actions={
                     <>
                         <button onClick={() => setDeleteModalOpen(false)} className="back-home-btn" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>Annuler</button>
-                        <button onClick={handleDelete} className="btn-danger">Supprimer définitivement</button>
+                        <button onClick={handleDelete} className="admin-btn btn-danger">Supprimer définitivement</button>
                     </>
                 }
             >

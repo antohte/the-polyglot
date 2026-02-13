@@ -227,19 +227,19 @@ export default function AdminModeration() {
                             <>
                                 <button
                                     onClick={() => handleResolve(selectedReport.id, 'dismiss')}
-                                    className="btn-danger"
+                                    className="admin-btn btn-danger"
                                 >
                                     ❌ Rejeter
                                 </button>
                                 <button
                                     onClick={() => handleResolve(selectedReport.id, 'action_taken')}
-                                    className="btn-primary"
+                                    className="admin-btn btn-primary"
                                 >
                                     ✅ Marquer comme traité
                                 </button>
                             </>
                         ) : (
-                            <button onClick={() => setSelectedReport(null)} className="btn-primary">Fermer</button>
+                            <button onClick={() => setSelectedReport(null)} className="admin-btn btn-primary">Fermer</button>
                         )
                     }
                 >

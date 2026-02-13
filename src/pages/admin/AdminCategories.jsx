@@ -63,15 +63,24 @@ export default function AdminCategories() {
     const handleCreateCategory = async (e) => {
         e.preventDefault();
         try {
-            // Generate basic slug
-            const slug = newCategory.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            await api.categories.create({ ...newCategory, slug });
-            alert(newCategory.parent_id ? "Sous-catégorie créée !" : "Catégorie créée !");
+            // Let the backend generate the slug to ensure consistency (and handle accents)
+            const payload = { ...newCategory };
+            // Ensure parent_id is strictly null if empty string or falsy
+            if (!payload.parent_id) payload.parent_id = null;
+
+            await api.categories.create(payload);
+
+            // Show success message (using native alert for now as per existing code)
+            // But we should probably use Toast if available, though this file uses alerts.
+            // Keeping alert to minimize diff, but correcting message.
+            alert(newCategory.parent_id ? "✅ Sous-catégorie créée avec succès !" : "✅ Catégorie créée avec succès !");
+
             setIsCreateOpen(false);
             setNewCategory({ name: '', description: '', parent_id: null });
             fetchData();
         } catch (err) {
-            alert("Erreur création: " + err.message);
+            console.error(err);
+            alert("❌ Erreur lors de la création : " + (err.message || "Erreur inconnue"));
         }
     }
 
@@ -106,7 +115,7 @@ export default function AdminCategories() {
                     <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>Structurez le contenu du forum.</p>
                 </div>
                 <button
-                    className="btn-primary"
+                    className="admin-btn btn-primary"
                     onClick={() => {
                         setNewCategory({ name: '', description: '', parent_id: activeTab === 'subcategories' ? null : null });
                         setIsCreateOpen(true);
@@ -244,7 +253,7 @@ export default function AdminCategories() {
                 actions={
                     <>
                         <button onClick={() => setIsCreateOpen(false)} className="back-home-btn" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>Annuler</button>
-                        <button onClick={handleCreateCategory} className="btn-primary">Créer</button>
+                        <button onClick={handleCreateCategory} className="admin-btn btn-primary">Créer</button>
                     </>
                 }
             >

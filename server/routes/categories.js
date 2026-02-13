@@ -14,12 +14,24 @@ router.get('/', async (req, res) => {
 
 // Create category (or subcategory)
 router.post('/', async (req, res) => {
-    const { slug, name, description, parent_id, created_by } = req.body; // created_by optional if I add col later
+    const { slug, name, description, parent_id, created_by } = req.body;
+    // Generate slug if not provided or clean it
+    let finalSlug = slug;
+    if (!finalSlug || finalSlug.trim() === '') {
+        finalSlug = name.toString().toLowerCase()
+            .normalize('NFD') // Split accented characters
+            .replace(/[\u0300-\u036f]/g, '') // Remove accents
+            .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with dash
+            .replace(/^-+|-+$/g, ''); // Remove leading/trailing dashes
+    }
+
+    const finalParentId = (parent_id && parent_id !== '') ? parent_id : null;
+
     try {
         await db.query('INSERT INTO categories (slug, name, description, parent_id) VALUES (?, ?, ?, ?)',
-            [slug, name, description, parent_id]);
+            [finalSlug, name, description, finalParentId]);
 
-        const [newCat] = await db.query('SELECT * FROM categories WHERE slug = ?', [slug]);
+        const [newCat] = await db.query('SELECT * FROM categories WHERE slug = ?', [finalSlug]);
         res.status(201).json(newCat[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });

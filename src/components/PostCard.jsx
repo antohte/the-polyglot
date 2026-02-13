@@ -1,11 +1,13 @@
-// src/components/PostCard.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useToast } from "./Toast";
+import "../styles/PostCard.css";
 
 export default function PostCard({ post }) {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState([]);
   const [liked, setLiked] = useState(false);
@@ -42,7 +44,7 @@ export default function PostCard({ post }) {
   }, [post.id, user]);
 
   async function toggleLike() {
-    if (!user) return alert("Vous devez être connecté pour liker.");
+    if (!user) return addToast("Vous devez être connecté pour liker.", "error");
     try {
       // Optimistic UI
       setLiked(!liked);
@@ -52,19 +54,18 @@ export default function PostCard({ post }) {
 
       // Re-sync if needed, but response gave us boolean
       setLiked(res.liked);
-      // Fetch count again to be sure? Or trust logic. 
-      // Let's trust optimistic for now, or fetch count in background.
     } catch (err) {
       console.error("Error toggling like:", err);
       // Revert on error
       setLiked(liked);
       setLikeCount(prev => liked ? prev + 1 : prev - 1);
+      addToast("Erreur lors du like", "error");
     }
   }
 
   async function addComment(e) {
     e.preventDefault();
-    if (!user) return alert("Vous devez être connecté pour commenter.");
+    if (!user) return addToast("Vous devez être connecté pour commenter.", "error");
     if (!commentText.trim()) return;
 
     try {
@@ -78,36 +79,46 @@ export default function PostCard({ post }) {
 
       setComments([...comments, addedComment]);
       setCommentText("");
+      addToast("Commentaire ajouté !", "success");
     } catch (err) {
       console.error("Error adding comment:", err);
-      alert("Erreur lors de l'ajout du commentaire");
+      addToast("Erreur lors de l'ajout du commentaire", "error");
     }
   }
 
   return (
-    <article className="post">
-      <Link to={`/post/${post.id}`} className="post-link-overlay" />
+    <article className="postcard">
+      <Link to={`/post/${post.id}`} className="postcard-link-overlay" />
 
-      <div className="post-header">
-        <div className="post-topline">
-          <span className="post-author">{post.author_name || "Anonyme"}</span>
-          <span className="dot">•</span>
-          <span className="post-category">{post.category_slug || "Général"}</span>
+      <div className="postcard-header">
+        <div className="postcard-meta-top">
+          <div className="postcard-author-info">
+            <div className="postcard-avatar-placeholder">
+              {post.author_name ? post.author_name[0].toUpperCase() : "A"}
+            </div>
+            <div className="postcard-author-text">
+              <span className="postcard-author-name">{post.author_name || "Anonyme"}</span>
+              <span className="postcard-date">{new Date(post.created_at).toLocaleDateString('fr-FR')}</span>
+            </div>
+          </div>
+          {post.category_slug && (
+            <span className="postcard-category-pill">{post.category_slug}</span>
+          )}
         </div>
 
-        <h3 className="post-title">{post.title}</h3>
+        <h3 className="postcard-title">{post.title}</h3>
       </div>
 
-      {post.image_url && (
-        <img className="media" src={post.image_url} alt="media" />
-      )}
+      <p className="postcard-content">{post.content}</p>
 
-      <p className="content">{post.content}</p>
+      {post.image_url && (
+        <img className="postcard-media" src={post.image_url} alt="media" />
+      )}
 
       {/* Legacy/Future File Support Placeholder */}
       {/* {post.files && ... } */}
 
-      <div className="actions">
+      <div className="postcard-actions">
         <button className={`btn like-btn ${liked ? "active" : ""}`} onClick={toggleLike}>
           👍 {likeCount}
         </button>

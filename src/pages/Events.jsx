@@ -57,32 +57,31 @@ export default function Events() {
     return (
         <div className="container">
             {/* Hero Section - Department Description */}
-            <div className="events-hero">
+            <div className="events-header">
                 <h1>{settings?.events_title || '📅 Pôle Événementiel'}</h1>
                 <p>
                     {settings?.events_description || 'Bienvenue au Pôle Événementiel de The Polyglot ! Découvrez nos événements culturels, linguistiques et académiques.'}
                 </p>
             </div>
 
-            {/* Events Grid */}
-            <div className="events-grid">
-                {events.length === 0 ? (
-                    <div className="card">
-                        <p style={{ color: "var(--color-text-secondary)" }}>
-                            Aucun événement à venir pour le moment. Revenez bientôt !
-                        </p>
-                    </div>
-                ) : (
-                    events.map((event) => (
+            {/* Events Grid or Empty State */}
+            {events.length === 0 ? (
+                <div className="events-empty">
+                    <h3>Aucun événement à venir</h3>
+                    <p>Revenez bientôt pour découvrir nos prochains événements !</p>
+                </div>
+            ) : (
+                <div className="events-grid">
+                    {events.map((event) => (
                         <EventCard key={event.id} event={event} />
-                    ))
-                )}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {/* FAB for creating events (admin and organizers only) */}
             {user && isOrganizer && (
                 <button
-                    className="fab btn-primary"
+                    className="create-event-btn"
                     onClick={() => setShowNewEvent(true)}
                     title="Créer un événement"
                 >

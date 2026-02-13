@@ -63,8 +63,8 @@ export default function Login() {
   }
 
   return (
-    <div className="login-container">
-      <div className="login-box">
+    <div className="login-page">
+      <div className="login-container">
         <div className="login-header">
           <img src={logoPolyglot} alt="The Polyglot" style={{ height: '120px', width: 'auto' }} />
         </div>
@@ -83,6 +83,7 @@ export default function Login() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Ex: Jean Dupont"
+                className="form-input"
                 required
                 disabled={loading}
               />
@@ -97,6 +98,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="votre@email.com"
+              className="form-input"
               required
               disabled={loading}
             />
@@ -110,6 +112,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              className="form-input"
               required
               disabled={loading}
             />
@@ -124,13 +127,14 @@ export default function Login() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
+                className="form-input"
                 required
                 disabled={loading}
               />
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary" disabled={loading}>
+          <button type="submit" className="btn btn-primary btn-submit" disabled={loading}>
             {loading ? 'Chargement...' : (isSignUp ? 'S\'inscrire' : 'Se connecter')}
           </button>
         </form>

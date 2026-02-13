@@ -3,7 +3,10 @@ import { api } from "../../api/client";
 import "../../styles/Admin.css";
 import AdminModal from "../../components/AdminModal";
 
+import { useAuth } from "../../auth/AuthContext";
+
 export default function AdminUsers() {
+    const { user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -93,7 +96,7 @@ export default function AdminUsers() {
                     <h1>Gestion des Utilisateurs</h1>
                     <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>Gérez les membres, leurs rôles et accès.</p>
                 </div>
-                <button className="btn-primary" onClick={() => setIsCreateOpen(true)} style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}>
+                <button className="admin-btn btn-primary" onClick={() => setIsCreateOpen(true)} style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}>
                     + Nouvel Utilisateur
                 </button>
             </div>
@@ -163,6 +166,7 @@ export default function AdminUsers() {
                                         <select
                                             value={user.role || 'user'}
                                             onChange={(e) => changeRole(user, e.target.value)}
+                                            disabled={currentUser?.role !== 'admin'}
                                             style={{
                                                 background: 'rgba(15, 23, 42, 0.5)',
                                                 color: user.role === 'admin' ? '#fca5a5' : user.role === 'organizer' ? '#c4b5fd' : '#cbd5e1',
@@ -171,11 +175,13 @@ export default function AdminUsers() {
                                                 borderRadius: '6px',
                                                 fontWeight: '600',
                                                 fontSize: '0.85rem',
-                                                cursor: 'pointer'
+                                                cursor: currentUser?.role === 'admin' ? 'pointer' : 'not-allowed',
+                                                opacity: currentUser?.role === 'admin' ? 1 : 0.6
                                             }}
                                         >
                                             <option value="user">User</option>
                                             <option value="organizer">Organizer</option>
+                                            <option value="moderator">Moderator</option>
                                             <option value="admin">Admin</option>
                                         </select>
                                     </td>
@@ -187,12 +193,14 @@ export default function AdminUsers() {
                                         )}
                                     </td>
                                     <td>
-                                        <button
-                                            className={`admin-btn ${user.is_banned ? 'btn-success' : 'btn-danger'}`}
-                                            onClick={() => toggleBan(user)}
-                                        >
-                                            {user.is_banned ? "Débannir" : "Bannir"}
-                                        </button>
+                                        {currentUser?.role === 'admin' && (
+                                            <button
+                                                className={`admin-btn ${user.is_banned ? 'btn-success' : 'btn-danger'}`}
+                                                onClick={() => toggleBan(user)}
+                                            >
+                                                {user.is_banned ? "Débannir" : "Bannir"}
+                                            </button>
+                                        )}
                                         <a href={`/user/${user.id}`} target="_blank" rel="noreferrer" className="admin-btn btn-primary" style={{ textDecoration: 'none' }}>
                                             Voir
                                         </a>
@@ -212,7 +220,7 @@ export default function AdminUsers() {
                 actions={
                     <>
                         <button onClick={() => setIsCreateOpen(false)} className="back-home-btn" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>Annuler</button>
-                        <button onClick={handleCreateUser} className="btn-primary">Créer l'utilisateur</button>
+                        <button onClick={handleCreateUser} className="admin-btn btn-primary">Créer l'utilisateur</button>
                     </>
                 }
             >

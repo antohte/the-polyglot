@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// Get all users
-router.get('/', async (req, res) => {
+const { verifyToken, verifyAdmin } = require('../middleware/auth');
+
+// Get all users (Admin only likely, or at least authenticated)
+router.get('/', verifyToken, async (req, res) => {
     try {
         const [users] = await db.query('SELECT * FROM users');
         res.json(users);
@@ -13,7 +15,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get single user by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', verifyToken, async (req, res) => {
     try {
         const [users] = await db.query('SELECT * FROM users WHERE id = ?', [req.params.id]);
         if (users.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -24,25 +26,69 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create or Update User (Upsert) - useful for syncing from Firebase Auth
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
     const { email, display_name, full_name, photo_url, role, bio, social_links, license_year, department } = req.body;
+
+    // Authorization Check: prevent role escalation, BUT allow profile updates
+    // if role is present but user is not admin, we just ignore the role update instead of blocking the whole request.
+    const tryingToUpdateRole = role !== undefined && role !== null;
+    const isAdmin = req.user.role === 'admin';
+
+    // If trying to update role AND not admin, we will just use the current role (ignore the request change)
+    // We fetch current role inside the logic below.
+
     try {
         // Check if user exists
-        const [existing] = await db.query('SELECT id FROM users WHERE id = ?', [req.params.id]);
+        const [existing] = await db.query('SELECT id, role FROM users WHERE id = ?', [req.params.id]);
 
         if (existing.length > 0) {
             // Update
+            const currentUser = existing[0];
+
+            // If user is admin (and role is provided), use new role.
+            // If user is NOT admin, use EXISTING role (prevent change).
+            const finalRole = (isAdmin && tryingToUpdateRole) ? role : currentUser.role;
+
             await db.query(`
                 UPDATE users SET 
-                email = ?, display_name = ?, full_name = ?, photo_url = ?, role = COALESCE(?, role), bio = ?, social_links = ?, license_year = ?, department = ?
+                email = COALESCE(?, email), display_name = ?, full_name = ?, photo_url = ?, role = ?, bio = ?, location = ?, interests = ?, social_links = ?, license_year = ?, department = ?
                 WHERE id = ?
-            `, [email, display_name, full_name, photo_url, role, bio, JSON.stringify(social_links || {}), license_year, department, req.params.id]);
+            `, [
+                email,
+                display_name,
+                full_name,
+                photo_url,
+                finalRole,
+                bio,
+                req.body.location, // New field 
+                req.body.interests, // New field
+                JSON.stringify(social_links || {}),
+                license_year,
+                department,
+                req.params.id
+            ]);
         } else {
-            // Create
+            // Create - Only Admins should create users via this route usually
+            // If normal user tries to PUT to create (unlikely with this logic flow if auth is checked), force user role.
+            const forcedRole = (isAdmin && role) ? role : 'user';
+
             await db.query(`
-                INSERT INTO users (id, email, display_name, full_name, photo_url, role, bio, social_links, license_year, department)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [req.params.id, email, display_name, full_name, photo_url, role || 'user', bio, JSON.stringify(social_links || {}), license_year, department]);
+                INSERT INTO users (id, email, display_name, full_name, photo_url, role, bio, location, interests, social_links, license_year, department)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                req.params.id,
+                email,
+                display_name,
+                full_name,
+                photo_url,
+                forcedRole,
+                bio,
+                req.body.location,
+                req.body.interests,
+                JSON.stringify(social_links || {}),
+                license_year,
+                department
+            ]);
         }
 
         const [updated] = await db.query('SELECT * FROM users WHERE id = ?', [req.params.id]);
@@ -55,7 +101,7 @@ router.put('/:id', async (req, res) => {
 
 
 // Delete user
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyAdmin, async (req, res) => {
     try {
         await db.query('DELETE FROM users WHERE id = ?', [req.params.id]);
         res.json({ message: 'User deleted' });

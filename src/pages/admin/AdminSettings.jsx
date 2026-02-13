@@ -45,10 +45,10 @@ export default function AdminSettings() {
     const handleSaveSettings = async () => {
         setSaving(true);
         setMessage('');
-        
+
         try {
             const result = await updateSettings(settings);
-            
+
             if (result.success) {
                 setMessage('✅ Sauvegardé !');
             } else {
@@ -128,7 +128,7 @@ export default function AdminSettings() {
                     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                         <div className="content-card" style={{ marginBottom: '2rem' }}>
                             <h2>🎨 Couleurs des boutons</h2>
-                            <p style={{color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.95rem', lineHeight: '1.6'}}>Ces couleurs contrôlent <strong>TOUS</strong> les éléments interactifs : boutons du header, boutons d'action, liens, boutons de catégories. La couleur secondaire est utilisée pour les dégradés avec la principale.</p>
+                            <p style={{ color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.95rem', lineHeight: '1.6' }}>Ces couleurs contrôlent <strong>TOUS</strong> les éléments interactifs : boutons du header, boutons d'action, liens, boutons de catégories. La couleur secondaire est utilisée pour les dégradés avec la principale.</p>
                             <div className="settings-grid">
                                 <ColorPicker label="Couleur principale (boutons, liens)" settingKey="main_color" />
                                 <ColorPicker label="Couleur secondaire (dégradés)" settingKey="secondary_color" />
@@ -136,7 +136,7 @@ export default function AdminSettings() {
                         </div>
                         <div className="content-card" style={{ marginBottom: '2rem' }}>
                             <h2>🎭 Arrière-plan et Cards</h2>
-                            <p style={{color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.95rem', lineHeight: '1.6'}}>Couleurs de fond du site</p>
+                            <p style={{ color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.95rem', lineHeight: '1.6' }}>Couleurs de fond du site</p>
                             <div className="settings-grid">
                                 <ColorPicker label="Fond du site (arrière-plan général)" settingKey="bg_site" />
                                 <ColorPicker label="Fond des cartes (posts, events, catégories)" settingKey="bg_cards" />
@@ -144,7 +144,7 @@ export default function AdminSettings() {
                         </div>
                         <div className="content-card">
                             <h2>✍️ Textes</h2>
-                            <p style={{color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.95rem', lineHeight: '1.6'}}>Couleurs des textes affichés</p>
+                            <p style={{ color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.95rem', lineHeight: '1.6' }}>Couleurs des textes affichés</p>
                             <div className="settings-grid">
                                 <ColorPicker label="Texte principal (titres, paragraphes, contenu)" settingKey="text_main" />
                                 <ColorPicker label="Texte atténué (dates, placeholders, infos secondaires)" settingKey="text_light" />
@@ -165,7 +165,7 @@ export default function AdminSettings() {
             </div>
 
             <div style={{ position: 'sticky', bottom: '2rem', marginTop: '3rem', display: 'flex', justifyContent: 'center', zIndex: 100 }}>
-                <button className="btn-primary" onClick={handleSaveSettings} disabled={saving} style={{ width: '400px', padding: '1.25rem 2rem', fontSize: '1.2rem', fontWeight: '700', justifyContent: 'center', boxShadow: '0 10px 40px rgba(99, 102, 241, 0.4)', background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}>
+                <button className="admin-btn btn-primary" onClick={handleSaveSettings} disabled={saving} style={{ width: '400px', padding: '1.25rem 2rem', fontSize: '1.2rem', fontWeight: '700', justifyContent: 'center', boxShadow: '0 10px 40px rgba(99, 102, 241, 0.4)', background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}>
                     {saving ? "💾 Sauvegarde..." : "💾 Sauvegarder tout"}
                 </button>
             </div>

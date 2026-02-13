@@ -14,22 +14,14 @@ export default function Forum() {
     const [showRequestModal, setShowRequestModal] = useState(false)
     const [dynamicCategories, setDynamicCategories] = useState([])
 
-    // Charger les catégories approuvées depuis MySQL
+    // Charger les catégories dynamiques
     useEffect(() => {
         api.categories.getAll().then(cats => {
             setDynamicCategories(cats)
         }).catch(err => console.error("Error fetching categories:", err));
     }, [])
 
-    // Combiner les catégories statiques et dynamiques SANS DOUBLONS
-    // Ne garder les catégories dynamiques QUE si leur slug n'existe pas dans les statiques
-    const staticSlugs = CATEGORIES.map(c => c.slug);
-    const uniqueDynamicCategories = dynamicCategories.filter(c => !staticSlugs.includes(c.slug));
-
-    const allCategories = [
-        ...CATEGORIES.map(c => ({ ...c, type: 'static' })),
-        ...uniqueDynamicCategories.map(c => ({ ...c, type: 'dynamic' }))
-    ]
+    const allCategories = dynamicCategories.filter(c => !c.parent_id);
 
     return (
         <div className="container">
@@ -47,17 +39,7 @@ export default function Forum() {
                 }}>
                     <button
                         onClick={() => setShowRequestModal(true)}
-                        className="btn"
-                        style={{
-                            background: "linear-gradient(135deg, var(--color-primary), var(--color-secondary))",
-                            color: "white",
-                            padding: "0.75rem 1.5rem",
-                            fontSize: "1rem",
-                            fontWeight: "600",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem"
-                        }}
+                        className="btn btn-primary"
                     >
                         ➕ Proposer une nouvelle catégorie
                     </button>

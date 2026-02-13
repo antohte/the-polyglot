@@ -298,15 +298,16 @@ a {
 /* ============== POSTS ============== */
 .post {
   background: white;
-  border: 2px solid #e6dfd4;
-  border-radius: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
   padding: 16px;
   margin: 16px 0;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.2s ease-in-out;
   cursor: pointer;
+  overflow: hidden;
+  /* Ensures content stays inside rounded corners */
 }
 
 .post-link-overlay {
@@ -315,78 +316,85 @@ a {
   z-index: 1;
 }
 
-.post::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
 .post:hover {
-  border-color: #667eea;
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.12);
   transform: translateY(-2px);
-}
-
-.post:hover::before {
-  opacity: 1;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: var(--color-primary-light);
 }
 
 .post-header {
+  /* No padding needed here, parent handles it */
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 8px;
 }
 
 .post-topline {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
 }
 
 .post-author {
-  font-weight: 700;
-  color: #000;
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
-/* auteur bien visible */
 .post-category {
-  color: var(--muted);
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .post-title {
-  margin: 0;
-  font-size: 20px;
-  line-height: 1.25;
+  margin: 4px 0 8px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-text-primary);
 }
 
 .dot {
-  color: var(--muted);
-  user-select: none;
+  color: var(--color-border);
 }
 
 .media {
   width: 100%;
-  border-radius: 14px;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  margin: 12px 0 0 0;
+  border-radius: 12px;
+  /* Rounded corners for the image */
   border: 1px solid var(--border);
-  margin: 10px 0;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
 }
 
 .content {
-  line-height: 1.5;
+  /* No padding needed here, parent handles it */
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin-top: 12px;
+}
+
+/* If there is media, reduce top margin of content */
+.media+.content {
+  margin-top: 12px;
 }
 
 .actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  /* Separator line */
+  background: transparent;
+  /* Remove background diff */
 }
 
 .comment-form {
@@ -400,24 +408,28 @@ a {
 }
 
 .comments {
-  margin-top: 8px;
+  margin-top: 16px;
   display: grid;
-  gap: 6px;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
 }
 
 .comment {
   display: flex;
   gap: 8px;
-  align-items: baseline;
+  align-items: flex-start;
+  font-size: 0.9rem;
 }
 
 .comment-author {
   font-weight: 600;
-  color: var(--brand);
+  color: var(--color-primary);
+  white-space: nowrap;
 }
 
 .comment-text {
-  color: var(--text);
+  color: var(--color-text-primary);
 }
 
 /* ============== FORUM HUB (cartes de rubriques) ============== */
@@ -564,4 +576,88 @@ a {
   .modal-header {
     padding: 8px 0 8px;
   }
+
+}
+
+/* ============== POST CARDS (Refactored) ============== */
+.postcard {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.postcard-link-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.postcard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: var(--color-primary-light, #4f46e5);
+}
+
+.postcard-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.postcard-topline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.postcard-category {
+  color: var(--brand);
+  background: rgba(11, 93, 167, 0.1);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.postcard-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.postcard-content {
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.postcard-media {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.postcard-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  background: transparent;
 }

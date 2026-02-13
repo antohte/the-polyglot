@@ -10,8 +10,8 @@ export default function AdminRoute() {
         return <div className="loading-screen">Chargement...</div>;
     }
 
-    // Si pas connecté ou pas admin -> redirect Home
-    if (!user || !profile || profile.role !== "admin") {
+    // Si pas connecté ou pas admin/moderator -> redirect Home
+    if (!user || !profile || (profile.role !== "admin" && profile.role !== "moderator")) {
         return <Navigate to="/" replace />;
     }
 

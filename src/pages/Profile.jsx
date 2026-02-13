@@ -241,13 +241,13 @@ export default function Profile() {
           <h2>📩 Demandes reçues</h2>
           <div className="requests-list">
             {requests.map(r => (
-              <div key={r.id} className="request-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee' }}>
+              <div key={r.id} className="request-card">
                 <div>
                   <strong>{r.full_name || r.display_name}</strong>
                 </div>
-                <div style={{ display: 'flex', gap: '5px' }}>
-                  <button className="btn btn-primary" onClick={() => handleAccept(r.id)}>Accepter</button>
-                  <button className="btn btn-ghost" onClick={() => handleReject(r.id)} style={{ color: 'red' }}>Refuser</button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn btn-sm btn-primary" onClick={() => handleAccept(r.id)}>Accepter</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => handleReject(r.id)}>Refuser</button>
                 </div>
               </div>
             ))}
@@ -261,12 +261,14 @@ export default function Profile() {
         {friends.length === 0 ? (
           <p>Vous n'avez pas encore d'amis.</p>
         ) : (
-          <div className="friends-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginTop: '10px' }}>
+          <div className="friends-list">
             {friends.map(f => (
-              <div key={f.id} className="friend-card" style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontWeight: 'bold' }}>{f.full_name || f.display_name}</div>
-                <button className="btn-ghost" onClick={() => navigate(`/user/${f.id}`)} style={{ fontSize: '0.8rem', marginTop: '5px' }}>Voir</button>
-                <button className="btn-ghost" onClick={() => handleRemoveFriend(f.id)} style={{ fontSize: '0.8rem', color: 'red', marginTop: '5px' }}>Supprimer</button>
+              <div key={f.id} className="friend-card">
+                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>{f.full_name || f.display_name}</div>
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                  <button className="btn btn-sm btn-secondary" onClick={() => navigate(`/user/${f.id}`)}>Voir</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => handleRemoveFriend(f.id)}>Supprimer</button>
+                </div>
               </div>
             ))}
           </div>
