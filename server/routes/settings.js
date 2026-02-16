@@ -6,17 +6,20 @@ const db = require('../db');
 router.get('/', async (req, res) => {
     try {
         const [rows] = await db.query('SELECT setting_key, setting_value FROM settings');
-        
+
         // Convertir le tableau en objet clé-valeur
         const settings = {};
         rows.forEach(row => {
             settings[row.setting_key] = row.setting_value;
         });
-        
+
         res.json(settings);
     } catch (error) {
         console.error('Error fetching settings:', error);
-        res.status(500).json({ error: 'Erreur lors de la récupération des paramètres' });
+        res.status(500).json({
+            error: 'Erreur lors de la récupération des paramètres',
+            details: error.message
+        });
     }
 });
 
@@ -24,11 +27,11 @@ router.get('/', async (req, res) => {
 router.put('/', async (req, res) => {
     try {
         const settingsToUpdate = req.body;
-        
+
         // Utiliser une transaction pour mettre à jour tous les paramètres
         const connection = await db.getConnection();
         await connection.beginTransaction();
-        
+
         try {
             for (const [key, value] of Object.entries(settingsToUpdate)) {
                 await connection.query(
@@ -36,10 +39,10 @@ router.put('/', async (req, res) => {
                     [key, value, value]
                 );
             }
-            
+
             await connection.commit();
             connection.release();
-            
+
             res.json({ message: 'Paramètres mis à jour avec succès' });
         } catch (error) {
             await connection.rollback();

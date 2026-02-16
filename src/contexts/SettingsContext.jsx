@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import defaultLogo from '../assets/logo_polyglot.jpg';
 
 const SettingsContext = createContext();
 
@@ -17,13 +18,15 @@ export function SettingsProvider({ children }) {
         primary_color: '#6366f1',
         secondary_color: '#8b5cf6',
         button_color: '#10b981',
-        logo_url: '/src/assets/logo_polyglot.jpg',
+        logo_url: defaultLogo,
         maintenance_mode: 'false',
         allow_registrations: 'true',
         welcome_title: 'Bienvenue sur The Polyglot',
         welcome_message: 'Connectez-vous avec des étudiants du monde entier',
         footer_text: '© 2026 The Polyglot - Tous droits réservés',
-        contact_email: 'contact@thepolyglot.com'
+        contact_email: 'contact@thepolyglot.com',
+        home_hero_title: 'The Polyglot',
+        home_hero_subtitle: 'Posts, actus, projets. Un espace pour la promo.'
     });
     const [loading, setLoading] = useState(true);
 
@@ -38,28 +41,27 @@ export function SettingsProvider({ children }) {
             'button_hover_color': '--button-hover-color',
             'link_color': '--link-color',
             'link_hover_color': '--link-hover-color',
-            
+
             // Couleurs de fond
             'background_color': '--background-color',
             'card_background': '--card-background',
             'header_background': '--header-background',
             'footer_background': '--footer-background',
-            
+
             // Couleurs de texte
             'text_color': '--text-color',
             // Couleur principale
             'main_color': '--color-primary',
-            'secondary_color': '--color-secondary',
-            
+
             // Couleurs de fond
             'bg_site': '--color-bg-primary',
             'bg_cards': '--color-bg-secondary',
-            
+
             // Couleurs de texte
             'text_main': '--color-text-primary',
             'text_light': '--color-text-secondary'
         };
-        
+
         // Appliquer chaque propriété CSS
         Object.keys(cssMapping).forEach(settingKey => {
             if (data[settingKey]) {
@@ -71,11 +73,11 @@ export function SettingsProvider({ children }) {
     // Fonction pour récupérer les settings depuis l'API
     const fetchSettings = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/settings');
+            const response = await fetch('/api/settings');
             if (response.ok) {
                 const data = await response.json();
                 setSettings(data);
-                
+
                 // Appliquer tous les styles CSS
                 applyStylesFromSettings(data);
             }
@@ -89,7 +91,7 @@ export function SettingsProvider({ children }) {
     // Fonction pour mettre à jour les settings
     const updateSettings = async (newSettings) => {
         try {
-            const response = await fetch('http://localhost:5000/api/settings', {
+            const response = await fetch('/api/settings', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -99,10 +101,10 @@ export function SettingsProvider({ children }) {
 
             if (response.ok) {
                 setSettings(prev => ({ ...prev, ...newSettings }));
-                
+
                 // Appliquer tous les nouveaux styles
                 applyStylesFromSettings(newSettings);
-                
+
                 return { success: true };
             } else {
                 return { success: false, error: 'Erreur lors de la mise à jour' };
@@ -124,12 +126,12 @@ export function SettingsProvider({ children }) {
     };
 
     return (
-        <SettingsContext.Provider value={{ 
-            settings, 
-            loading, 
-            updateSettings, 
+        <SettingsContext.Provider value={{
+            settings,
+            loading,
+            updateSettings,
             fetchSettings,
-            getText 
+            getText
         }}>
             {children}
         </SettingsContext.Provider>

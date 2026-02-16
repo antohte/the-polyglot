@@ -25,7 +25,6 @@ export default function Profile() {
   const [busy, setBusy] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
-  const [editSocials, setEditSocials] = useState(false);
   const [socials, setSocials] = useState({
     facebook: "",
     instagram: "",
@@ -34,7 +33,6 @@ export default function Profile() {
     github: "",
     website: "",
   });
-  const [savingSocials, setSavingSocials] = useState(false);
 
   // Friends & Requests
   const [friends, setFriends] = useState([]);
@@ -55,12 +53,12 @@ export default function Profile() {
       setInterests(profile.interests || "");
       setProfilePhoto(profile.profile_photo || profile.photo_url || "");
       setSocials({
-        facebook: profile.socials?.facebook || "",
-        instagram: profile.socials?.instagram || "",
-        twitter: profile.socials?.twitter || "",
-        linkedin: profile.socials?.linkedin || "",
-        github: profile.socials?.github || "",
-        website: profile.socials?.website || "",
+        facebook: profile.socialLinks?.facebook || "",
+        instagram: profile.socialLinks?.instagram || "",
+        twitter: profile.socialLinks?.twitter || "",
+        linkedin: profile.socialLinks?.linkedin || "",
+        github: profile.socialLinks?.github || "",
+        website: profile.socialLinks?.website || "",
       });
 
       loadFriendsAndRequests();
@@ -100,7 +98,7 @@ export default function Profile() {
         const formData = new FormData();
         formData.append('file', photoFile);
 
-        const uploadResponse = await fetch('http://localhost:5000/api/upload', {
+        const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
           body: formData
         });
@@ -119,7 +117,8 @@ export default function Profile() {
         bio: bio.trim(),
         location: location.trim(),
         interests: interests.trim(),
-        profile_photo: uploadedPhotoUrl
+        profile_photo: uploadedPhotoUrl,
+        social_links: socials
       };
 
       await api.users.update(user.uid, payload);
@@ -136,24 +135,7 @@ export default function Profile() {
     }
   }
 
-  async function handleSaveSocials() {
-    setSavingSocials(true);
-    try {
-      await api.users.update(user.uid, {
-        social_links: socials
-      });
 
-      setEditSocials(false);
-      setSuccessMsg("Réseaux sociaux mis à jour avec succès !");
-      setTimeout(() => setSuccessMsg(""), 3000);
-      window.location.reload();
-    } catch (e) {
-      console.error(e);
-      alert("Erreur lors de la sauvegarde des réseaux sociaux.");
-    } finally {
-      setSavingSocials(false);
-    }
-  }
 
   async function handleAccept(requesterId) {
     try {
@@ -278,7 +260,7 @@ export default function Profile() {
       {/* Section modifier le profil */}
       <div className="profile-section">
         <div className="section-header">
-          <h2>Informations personnelles</h2>
+          <h2>📝 Modifier mon profil</h2>
           {!editMode && (
             <button className="btn btn-primary" onClick={() => setEditMode(true)}>
               ✏️ Modifier
@@ -289,20 +271,79 @@ export default function Profile() {
         {!editMode ? (
           <div className="profile-display">
             <div className="info-row">
-              <label>Prénom</label>
-              <p>{firstName || "Non renseigné"}</p>
+              <label>📸 Photo de profil</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  background: profilePhoto ? `url(${profilePhoto}) center/cover` : 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.5rem',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  border: '3px solid rgba(255,255,255,0.1)'
+                }}>
+                  {!profilePhoto && fullName.charAt(0).toUpperCase()}
+                </div>
+                <p style={{ color: '#cbd5e1' }}>{profilePhoto ? "Photo définie" : "Aucune photo"}</p>
+              </div>
             </div>
             <div className="info-row">
-              <label>Nom</label>
-              <p>{lastName || "Non renseigné"}</p>
+              <label>📝 Bio</label>
+              <p style={{ whiteSpace: 'pre-wrap', color: '#cbd5e1' }}>
+                {bio || "Aucune bio renseignée"}
+              </p>
             </div>
             <div className="info-row">
-              <label>Année de licence</label>
-              <p>{year}</p>
+              <label>📍 Localisation</label>
+              <p>{location || "Non renseigné"}</p>
             </div>
             <div className="info-row">
-              <label>Email</label>
-              <p>{user.email}</p>
+              <label>🏷️ Centres d'intérêt</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                {interests ? interests.split(',').map((interest, idx) => (
+                  <span key={idx} style={{
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    color: '#818cf8',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '20px',
+                    fontSize: '0.9rem',
+                    border: '1px solid rgba(99, 102, 241, 0.2)'
+                  }}>
+                    {interest.trim()}
+                  </span>
+                )) : <p>Non renseigné</p>}
+              </div>
+            </div>
+            <div className="info-row">
+              <label>🔗 Réseaux sociaux</label>
+              <div style={{ marginTop: '0.5rem' }}>
+                {[
+                  { key: "facebook", label: "Facebook", icon: "📘" },
+                  { key: "instagram", label: "Instagram", icon: "📷" },
+                  { key: "twitter", label: "Twitter", icon: "🐦" },
+                  { key: "linkedin", label: "LinkedIn", icon: "💼" },
+                  { key: "github", label: "GitHub", icon: "💻" },
+                  { key: "website", label: "Site Web", icon: "🌐" },
+                ].map((social) => {
+                  const url = socials[social.key];
+                  if (!url) return null;
+                  return (
+                    <div key={social.key} style={{ marginBottom: '0.5rem' }}>
+                      <span style={{ marginRight: '0.5rem' }}>{social.icon}</span>
+                      <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#818cf8', textDecoration: 'none' }}>
+                        {social.label}
+                      </a>
+                    </div>
+                  );
+                })}
+                {!socials.facebook && !socials.instagram && !socials.twitter && !socials.linkedin && !socials.github && !socials.website && (
+                  <p>Aucun réseau social renseigné</p>
+                )}
+              </div>
             </div>
           </div>
         ) : (
@@ -347,106 +388,58 @@ export default function Profile() {
               </select>
             </div>
 
-            <div className="form-actions">
-              <button
-                className="btn btn-ghost"
-                onClick={() => setEditMode(false)}
-                disabled={busy}
-              >
-                Annuler
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={busy}
-              >
-                {busy ? "Enregistrement..." : "Enregistrer"}
-              </button>
+            <div className="form-group">
+              <label>📸 Photo de profil</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  background: photoPreview || profilePhoto ? `url(${photoPreview || profilePhoto}) center/cover` : 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '2rem',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  border: '3px solid rgba(255,255,255,0.1)'
+                }}>
+                  {!photoPreview && !profilePhoto && fullName.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    style={{ display: 'none' }}
+                    id="photo-upload"
+                  />
+                  <label htmlFor="photo-upload" className="btn btn-secondary" style={{ cursor: 'pointer', display: 'inline-block', fontSize: '0.9rem' }}>
+                    📷 Choisir une photo
+                  </label>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: 0 }}>
+                    Format: JPG, PNG. Taille max: 5 MB
+                  </p>
+                </div>
+              </div>
             </div>
-          </form>
-        )}
-      </div>
 
-      {/* Section Photo de profil */}
-      <div className="profile-section">
-        <div className="section-header">
-          <h2>📸 Photo de profil</h2>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', padding: '1rem' }}>
-          <div style={{
-            width: '120px',
-            height: '120px',
-            borderRadius: '50%',
-            background: photoPreview || profilePhoto ? `url(${photoPreview || profilePhoto}) center/cover` : 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '3rem',
-            color: 'white',
-            fontWeight: 'bold',
-            border: '4px solid rgba(255,255,255,0.1)'
-          }}>
-            {!photoPreview && !profilePhoto && fullName.charAt(0).toUpperCase()}
-          </div>
-          <div style={{ flex: 1 }}>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-              style={{ display: 'none' }}
-              id="photo-upload"
-            />
-            <label htmlFor="photo-upload" className="btn btn-primary" style={{ cursor: 'pointer', display: 'inline-block' }}>
-              📷 Choisir une photo
-            </label>
-            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-              Format: JPG, PNG. Taille max: 5 MB
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Section Bio */}
-      <div className="profile-section">
-        <div className="section-header">
-          <h2>📝 Bio</h2>
-          {!editMode && (
-            <button className="btn btn-primary" onClick={() => setEditMode(true)}>
-              ✏️ Modifier
-            </button>
-          )}
-        </div>
-        {editMode ? (
-          <div className="form-group">
-            <textarea
-              className="ui-input"
-              rows={5}
-              maxLength={500}
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Parlez-nous de vous..."
-              style={{ resize: 'vertical' }}
-            />
-            <div style={{ textAlign: 'right', color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-              {bio.length}/500 caractères
+            <div className="form-group">
+              <label>📝 Bio</label>
+              <textarea
+                className="ui-input"
+                rows={4}
+                maxLength={500}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Parlez-nous de vous..."
+                style={{ resize: 'vertical' }}
+              />
+              <div style={{ textAlign: 'right', color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                {bio.length}/500 caractères
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="profile-display">
-            <p style={{ whiteSpace: 'pre-wrap', color: '#cbd5e1' }}>
-              {bio || "Aucune bio renseignée"}
-            </p>
-          </div>
-        )}
-      </div>
 
-      {/* Section Localisation & Intérêts */}
-      <div className="profile-section">
-        <div className="section-header">
-          <h2>🌍 Localisation & Intérêts</h2>
-        </div>
-        {editMode ? (
-          <div>
             <div className="form-group">
               <label>📍 Localisation</label>
               <input
@@ -457,6 +450,7 @@ export default function Profile() {
                 placeholder="Paris, France"
               />
             </div>
+
             <div className="form-group">
               <label>🏷️ Centres d'intérêt</label>
               <input
@@ -470,166 +464,95 @@ export default function Profile() {
                 Séparez par des virgules
               </small>
             </div>
-          </div>
-        ) : (
-          <div className="profile-display">
-            <div className="info-row">
-              <label>📍 Localisation</label>
-              <p>{location || "Non renseigné"}</p>
-            </div>
-            <div className="info-row">
-              <label>🏷️ Centres d'intérêt</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-                {interests ? interests.split(',').map((interest, idx) => (
-                  <span key={idx} style={{
-                    background: 'rgba(99, 102, 241, 0.1)',
-                    color: '#818cf8',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '20px',
-                    fontSize: '0.9rem',
-                    border: '1px solid rgba(99, 102, 241, 0.2)'
-                  }}>
-                    {interest.trim()}
-                  </span>
-                )) : <p>Non renseigné</p>}
+
+            <div className="form-group">
+              <label>🔗 Réseaux sociaux</label>
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                <input
+                  className="ui-input"
+                  type="url"
+                  placeholder="📘 Facebook - https://facebook.com/..."
+                  value={socials.facebook}
+                  onChange={(e) => setSocials({ ...socials, facebook: e.target.value })}
+                />
+                <input
+                  className="ui-input"
+                  type="url"
+                  placeholder="📷 Instagram - https://instagram.com/..."
+                  value={socials.instagram}
+                  onChange={(e) => setSocials({ ...socials, instagram: e.target.value })}
+                />
+                <input
+                  className="ui-input"
+                  type="url"
+                  placeholder="🐦 Twitter - https://twitter.com/..."
+                  value={socials.twitter}
+                  onChange={(e) => setSocials({ ...socials, twitter: e.target.value })}
+                />
+                <input
+                  className="ui-input"
+                  type="url"
+                  placeholder="💼 LinkedIn - https://linkedin.com/in/..."
+                  value={socials.linkedin}
+                  onChange={(e) => setSocials({ ...socials, linkedin: e.target.value })}
+                />
+                <input
+                  className="ui-input"
+                  type="url"
+                  placeholder="💻 GitHub - https://github.com/..."
+                  value={socials.github}
+                  onChange={(e) => setSocials({ ...socials, github: e.target.value })}
+                />
+                <input
+                  className="ui-input"
+                  type="url"
+                  placeholder="🌐 Site Web - https://..."
+                  value={socials.website}
+                  onChange={(e) => setSocials({ ...socials, website: e.target.value })}
+                />
               </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Section Réseaux sociaux */}
-      <div className="profile-section">
-        <div className="section-header">
-          <h2>🔗 Réseaux sociaux</h2>
-          {!editSocials && (
-            <button className="btn btn-primary" onClick={() => setEditSocials(true)}>
-              ✏️ Modifier
-            </button>
-          )}
-        </div>
-
-        {editSocials ? (
-          <form className="profile-form" onSubmit={(e) => e.preventDefault()}>
-            <div className="form-group">
-              <label>📘 Facebook</label>
-              <input
-                className="ui-input"
-                type="url"
-                placeholder="https://facebook.com/..."
-                value={socials.facebook}
-                onChange={(e) => setSocials({ ...socials, facebook: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>📷 Instagram</label>
-              <input
-                className="ui-input"
-                type="url"
-                placeholder="https://instagram.com/..."
-                value={socials.instagram}
-                onChange={(e) => setSocials({ ...socials, instagram: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>🐦 Twitter</label>
-              <input
-                className="ui-input"
-                type="url"
-                placeholder="https://twitter.com/..."
-                value={socials.twitter}
-                onChange={(e) => setSocials({ ...socials, twitter: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>💼 LinkedIn</label>
-              <input
-                className="ui-input"
-                type="url"
-                placeholder="https://linkedin.com/in/..."
-                value={socials.linkedin}
-                onChange={(e) => setSocials({ ...socials, linkedin: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>💻 GitHub</label>
-              <input
-                className="ui-input"
-                type="url"
-                placeholder="https://github.com/..."
-                value={socials.github}
-                onChange={(e) => setSocials({ ...socials, github: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>🌐 Site Web</label>
-              <input
-                className="ui-input"
-                type="url"
-                placeholder="https://..."
-                value={socials.website}
-                onChange={(e) => setSocials({ ...socials, website: e.target.value })}
-              />
             </div>
 
             <div className="form-actions">
               <button
                 className="btn btn-ghost"
                 onClick={() => {
-                  setEditSocials(false);
-                  setSocials({
-                    facebook: profile?.socials?.facebook || "",
-                    instagram: profile?.socials?.instagram || "",
-                    twitter: profile?.socials?.twitter || "",
-                    linkedin: profile?.socials?.linkedin || "",
-                    github: profile?.socials?.github || "",
-                    website: profile?.socials?.website || "",
-                  });
+                  setEditMode(false);
+                  // Reset all fields to profile values
+                  if (profile) {
+                    const names = (profile.fullName || "").split(" ");
+                    setFirstName(names[0] || "");
+                    setLastName(names.slice(1).join(" ") || "");
+                    setYear(profile.licenseYear || "L3");
+                    setBio(profile.bio || "");
+                    setLocation(profile.location || "");
+                    setInterests(profile.interests || "");
+                    setProfilePhoto(profile.profile_photo || profile.photo_url || "");
+                    setPhotoPreview("");
+                    setPhotoFile(null);
+                    setSocials({
+                      facebook: profile.socialLinks?.facebook || "",
+                      instagram: profile.socialLinks?.instagram || "",
+                      twitter: profile.socialLinks?.twitter || "",
+                      linkedin: profile.socialLinks?.linkedin || "",
+                      github: profile.socialLinks?.github || "",
+                      website: profile.socialLinks?.website || "",
+                    });
+                  }
                 }}
-                disabled={savingSocials}
+                disabled={busy}
               >
                 Annuler
               </button>
               <button
                 className="btn btn-primary"
-                onClick={handleSaveSocials}
-                disabled={savingSocials}
+                onClick={handleSave}
+                disabled={busy}
               >
-                {savingSocials ? "Enregistrement..." : "💾 Enregistrer"}
+                {busy ? "Enregistrement..." : "💾 Enregistrer tout"}
               </button>
             </div>
           </form>
-        ) : (
-          <div className="socials-display">
-            {[
-              { key: "facebook", label: "Facebook", icon: "📘" },
-              { key: "instagram", label: "Instagram", icon: "📷" },
-              { key: "twitter", label: "Twitter", icon: "🐦" },
-              { key: "linkedin", label: "LinkedIn", icon: "💼" },
-              { key: "github", label: "GitHub", icon: "💻" },
-              { key: "website", label: "Site Web", icon: "🌐" },
-            ].map((social) => {
-              const url = socials[social.key];
-              return (
-                <div key={social.key} className="social-item">
-                  <span className="social-icon">{social.icon}</span>
-                  <span className="social-name">{social.label}:</span>
-                  {url ? (
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="social-link-text">
-                      {url}
-                    </a>
-                  ) : (
-                    <span className="social-empty">Non renseigné</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         )}
       </div>
 

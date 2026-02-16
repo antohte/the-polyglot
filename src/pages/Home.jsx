@@ -10,23 +10,16 @@ import '../styles/Illustrations.css'
 
 
 const promoImages = [
-    'https://images.unsplash.com/photo-1521737604893-d14cc237f11d',
-    'https://images.unsplash.com/photo-1529070538774-1843cb3265df',
-    'https://images.unsplash.com/photo-1496307653780-42ee777d4833'
+    'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=2673&auto=format&fit=crop', // Books/Study
+    'https://images.unsplash.com/photo-1543269865-cbf427effbad?q=80&w=2670&auto=format&fit=crop', // Students collaborating
+    'https://images.unsplash.com/photo-1527866959252-deab85ef7d1b?q=80&w=2670&auto=format&fit=crop' // diverse group talking
 ]
 
 
 export default function Home() {
     const { settings } = useSettings()
     const [posts, setPosts] = useState([])
-    const [i, setI] = useState(0)
-
-
-    useEffect(() => {
-        const t = setInterval(() => setI((v) => (v + 1) % promoImages.length), 3500)
-        return () => clearInterval(t)
-    }, [])
-
+    const heroImage = 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=2673&auto=format&fit=crop'; // Books/Study
 
     useEffect(() => {
         const loadPosts = async () => {
@@ -46,9 +39,9 @@ export default function Home() {
     return (
         <div className="home-page">
             <section className="hero">
-                <div className="carousel" style={{ backgroundImage: `url(${promoImages[i]})` }} />
+                <div className="carousel" style={{ backgroundImage: `url(${heroImage})` }} />
                 <div className="hero-text">
-                    <h1>{settings?.home_hero_title || 'Le Forum — Licence'}</h1>
+                    <h1>{settings?.home_hero_title || 'The Polyglot'}</h1>
                     <p>{settings?.home_hero_subtitle || 'Posts, actus, projets. Un espace pour la promo.'}</p>
                     <Link to="/forum" className="btn btn-cta">
                         Accéder au Forum →

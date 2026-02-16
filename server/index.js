@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const db = require('./db');
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Route files
 const userRoutes = require('./routes/users');
@@ -46,7 +46,24 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
 
-// Health check
+// Debug endpoint (REMOVE IN PRODUCTION AFTER FIXING)
+app.get('/api/debug-config', (req, res) => {
+    res.json({
+        cwd: process.cwd(),
+        dirname: __dirname,
+        env_files: {
+            cwd_path: path.join(process.cwd(), '.env'),
+            dirname_path: path.join(__dirname, '.env')
+        },
+        env_vars_set: {
+            DB_HOST: !!process.env.DB_HOST,
+            DB_USER: !!process.env.DB_USER,
+            DB_NAME: !!process.env.DB_NAME,
+            PORT: process.env.PORT
+        }
+    });
+});
+
 app.get('/api/health', (req, res) => {
     res.send('API is running...');
 });

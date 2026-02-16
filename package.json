@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:copy": "xcopy /E /I /Y dist server\\client_build",
+    "build:all": "npm run build && npm run build:copy",
     "lint": "eslint .",
     "preview": "vite preview"
   },
